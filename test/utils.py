@@ -14,10 +14,7 @@ def compile_state_machine(filename, generated_source_filename=".generated_state_
             f.write('r"""\n')
             f.write(state_machine_source)
             f.write('"""\n')
-    # Create the module we're return with
-    m = types.ModuleType("state_machine")
-    exec(python_code, m.__dict__)
-    return m
+    return smax.compile_python("state_machine", python_code)
 
 def wrap(state_machine_class):
     """

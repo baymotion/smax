@@ -93,15 +93,19 @@ By convention, application code subclasses MyStateMachine and the subclass provi
             # Super important functionality goes here.
             pass
 
-Now let's discuss how ev_ack is called.
-
-A Reactor instance provides the runtime support for timing and callback queues that the state machine uses to update itself.  To run the state machine, instantiate a reactor, instantiate your object, and run it.  A single reactor instance can handle any number of state machines.
+A Reactor instance provides the runtime support for timing and queues that the state machine uses to update itself.  To run the state machine,
 
     def main():
+        # Create a runtime environment that drives the state machine
         reactor = smax.SelectReactor()
+        # Create the state machine instance itself
         my_device = MyDevice(reactor, "/dev/ttyS0")
+        # Queue up a call to enter all the initial states
         my_device.start()
+        # Run the state machine.
         reactor.run()
+
+A single reactor instance can handle any number of state machines.  Once you have a reactor, you can create the state machine instance; for the state machine to enter the initial state(s) you must call "start" on it.
 
 ### Reactor
 
@@ -109,8 +113,8 @@ A reactor provides the runtime environment for state machines.  Specifically,
 
 - The call to reactor.run() goes into a perpetual loop, blocking until an event is observed.  When it sees an event, it calls an event handler registered with that event.  You can call reactor.stop() to cause reactor.run() to terminate.
 - All handlers executed by the reactor run in the same thread sequentially.  If that is the only thread in your program, then you don't need any locking.
-- If you have other threads, you can call reactor.call(cb) to schedule the reactor to call cb() at the next opportunity.  cb() will run in the reactor thread.
-- All handlers should be non blocking: the reactor won't wait for the next event until the current handler returns.  If your reactor stops working, it's probably because your handler is blocking on something.
+- If you have other threads, you can call reactor.call(cb) to schedule the reactor to call cb() at the next opportunity; cb() will run in the reactor thread.  Calls are added to a queue so any number of calls can be outstanding.
+- All handlers should be non blocking: the reactor won't find the next event until the current handler returns.  If your state machine stops working, it's probably because a handler is blocking on something.
 
 Reactor is an abstract class.  smax provides two useful implementations: SelectReactor and PyQtReactor.
 

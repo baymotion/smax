@@ -348,7 +348,7 @@ def generate_yaml(spec):
 def translate(source, filename):
     spec = parse(source, filename)
     y = generate_yaml(spec)
-    with open("out.yaml", "wt") as f:
+    with open(".translate.yaml", "wt") as f:
         f.write(y)
     code = generate_python(spec)
     return code
