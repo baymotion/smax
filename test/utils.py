@@ -5,7 +5,7 @@ import smax
 import smax.log as log
 import types
 
-def compile_state_machine(filename, generated_source_filename="generated_state_machine.py"):
+def compile_state_machine(filename, generated_source_filename=".generated_state_machine.py"):
     state_machine_source = smax.load_source(filename)
     python_code = smax.translate(state_machine_source, filename)
     if generated_source_filename:
@@ -74,7 +74,7 @@ def wrap(state_machine_class):
             i = self.events()
             for e in event_list:
                 ev = next(i)
-                log._debug("Expected %s, got %s." % (e, ev))
+                log._trace("Expected %s, got %s." % (e, ev))
                 assert ev == e
             try:
                 ev = next(i)

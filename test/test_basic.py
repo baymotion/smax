@@ -5,6 +5,9 @@
 # Proves that we go to the intended
 # states and not the unintended ones.
 
+import smax
+from smax import log
+import sys
 import utils
 
 r"""
@@ -14,7 +17,7 @@ import smax.log as log
 
 machine TestMachine:
     enter:
-        log.debug("entering.")
+        log.trace("entering.")
         self._a = False
         self._b = False
         self._c = False
@@ -38,17 +41,11 @@ machine TestMachine:
 %%
 """
 
-import smax
-from smax import log
-import sys
-
 def test_basic():
     module = utils.compile_state_machine(__file__)
     Test = utils.wrap(module.TestMachine)
     reactor = smax.SelectReactor()
-    log.enable_trace = True
     test = Test(reactor)
-    test._state_machine_debug_enable = True
     test.start()
     reactor.sync()
     assert test._a == True
