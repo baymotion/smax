@@ -61,8 +61,7 @@ class {{ machine.name }}({{machine.superclass}}):
     # events
     {%- for ev in machine.event_list %}
     def {{ev.name}}({{ev.args|insert("self")|join(", ")}}):
-        self._reactor.call({{ev.args|insert("self._%s_%s" % (machine.full_name, ev.name))|join(", ")}})
-        self._reactor.sync()
+        self._{{machine.full_name}}_{{ev.name}}({{ev.args|join(", ")}})
     {%- endfor %}{# ev in machine.event_list #}
     # states
     {%- for state in machine.all_states() %}
@@ -174,9 +173,9 @@ if {{transition.condition}}:
     {{-transition|goto|indent(4)}}
     return True
 {%- else %}{# transition.condition #}
+self._state_machine_handle({{event_args|join(", ")}})
 {{-transition|goto|indent(0)}}
 r = True
-self._state_machine_handle({{event_args|join(", ")}})
 {%- endif %}{# transition.condition #}
 """)
     r = [ ]
@@ -222,11 +221,10 @@ def goto(transition):
     args = []
     if event and transition.event:
         args.extend(transition.event.args)
-    args.insert(0, "self._%s" % transition_name(transition))
     t = environment.from_string(r"""
-self._reactor.call({{args|join(", ")}})
+{{transition_method}}({{args|join(", ")}})
 """)
-    return t.render(transition=transition, args=args)
+    return t.render(transition=transition, args=args, transition_method="self._%s" % transition_name(transition))
 
 def transition_method(transition):
     event = hasattr(transition, "event")
@@ -348,11 +346,12 @@ def generate_yaml(spec):
     y = yaml.dump(spec, default_flow_style=False)
     return y
 
-def translate(source, filename):
+def translate(source, filename, yaml_filename=None):
     spec = parse(source, filename)
-    y = generate_yaml(spec)
-    with open(".translate.yaml", "wt") as f:
-        f.write(y)
+    if yaml_filename:
+        y = generate_yaml(spec)
+        with open(yaml_filename, "wt") as f:
+            f.write(y)
     code = generate_python(spec)
     return code
 

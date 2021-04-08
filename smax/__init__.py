@@ -19,22 +19,29 @@ def compile_python(python_code, module_name="state_machine"):
     # to the caller.
     return m
 
-def load(filename, class_name, save_generated_python=None):
+def _load(filename):
     """ We cache the compiled results from filename
         so you can get other machine class implementations
         from this same file quickly.
     """
     global smax_modules
-    module = smax_modules.get(filename, None)
-    if module is None:
-        spec = load_source(filename)
-        python_code = translate(spec, filename)
-        if save_generated_python:
-            with open(save_generated_python, "wt") as f:
-                f.write(python_code)
+    source, spec, python_code, module = smax_modules.get(filename, (None,None,None,None))
+    if source is None:
+        source = load_source(filename)
+        spec = parse(source, filename)
+        python_code = generate_python(spec)
         module = compile_python(python_code)
-        smax_modules[filename] = module
+    return source, spec, python_code, module
+
+def load(filename, class_name, save_generated_python=None):
+    source, spec, python_code, module = _load(filename)
+    if save_generated_python:
+        with open(save_generated_python, "wt") as f:
+            f.write(python_code)
     return module.__dict__[class_name]
 
-smax_modules = { }
+def spec(filename):
+    source, spec, python_code, module = _load(filename)
+    return spec
 
+smax_modules = { }
