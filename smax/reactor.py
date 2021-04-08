@@ -18,29 +18,30 @@ class Reactor(object):
     def sync(self):
         while not self.done():
             if not self._q.empty():
-                cb = self._q.get()
-                log.trace("q cb=%s." % cb)
-                cb()
+                cb, args = self._q.get()
+                log.trace("execute cb=%s." % cb)
+                cb(*args)
                 continue
             timeout = None
             now = time.time()
             if self._alarms:
-                a = self._alarms[0]
-                trigger, cb = a
+                trigger, cb, args = self._alarms[0]
                 if trigger <= now:
                     self._alarms.pop(0)
                     log.trace("alarm cb=%s." % cb)
-                    cb()
+                    cb(*args)
                     continue
                 # we've reached our next closest timeout.
                 timeout = trigger - now
             return timeout
     def call(self, cb, *args):
-        self._q.put(lambda: cb(*args))
+        log.trace("queue cb=%s." % cb)
+        self._q.put( (cb, args) )
         self._signal()
     def after_s(self, seconds, callback, *args):
         trigger = time.time() + seconds
-        r = (trigger, lambda: callback(*args))
+        r = (trigger, callback, args)
+        log.trace("after_s cb=%s." % callback)
         self._alarms.append(r)
         self._alarms.sort()
         self._signal()
@@ -55,6 +56,7 @@ class Reactor(object):
     def done(self):
         return self._done
     def stop(self):
+        log.trace("stop")
         self._done = True
         self._signal()
     def _signal(self):

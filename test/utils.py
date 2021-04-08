@@ -14,7 +14,7 @@ def compile_state_machine(filename, generated_source_filename=".generated_state_
             f.write('r"""\n')
             f.write(state_machine_source)
             f.write('"""\n')
-    return smax.compile_python("state_machine", python_code)
+    return smax.compile_python(python_code)
 
 def wrap(state_machine_class):
     """

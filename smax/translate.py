@@ -16,6 +16,7 @@ def machine(m):
         s._transition_methods = [ ]
     t = environment.from_string(r"""
 class {{ machine.name }}({{machine.superclass}}):
+    # Make some printable strings to help diagnostics.
     {%- for state in machine.all_states() %}
     {{state.full_name}} = "{{state.dot_name}}"
     {%- endfor %}{# state in machine.all_states() #}
@@ -25,7 +26,7 @@ class {{ machine.name }}({{machine.superclass}}):
         self._state_machine_debug_enable = debug_enable
     def _state_machine_debug(self, msg):
         if self._state_machine_debug_enable:
-            print("DEBUG -- %s, state=%s." % (msg, self._state.keys()))
+            print("DEBUG -- %s, state=%s." % (msg, ",".join(self._state.keys())))
     # for diagnostic only
     def _state_machine_enter(self, state_name):
         self._state_machine_debug("Entering %s" % state_name)
@@ -61,6 +62,7 @@ class {{ machine.name }}({{machine.superclass}}):
     {%- for ev in machine.event_list %}
     def {{ev.name}}({{ev.args|insert("self")|join(", ")}}):
         self._reactor.call({{ev.args|insert("self._%s_%s" % (machine.full_name, ev.name))|join(", ")}})
+        self._reactor.sync()
     {%- endfor %}{# ev in machine.event_list #}
     # states
     {%- for state in machine.all_states() %}
@@ -120,6 +122,7 @@ class {{ machine.name }}({{machine.superclass}}):
     {%- if event in state._events %}
     def _{{state.full_name}}_{{event.name}}({{event.args|insert("self")|join(", ")}}):
         r = False
+        # Check inner states (if any)
         {%- for sl in state.inner_states %}
         {%- set condition=["if"] %}
         {%- for s in sl %}

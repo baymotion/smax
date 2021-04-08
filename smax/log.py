@@ -27,7 +27,7 @@ def write(enable, s):
         print(s)
 
 enable_trace = False
-# enable_trace = True
+enable_trace = True
 def trace(msg):
     write(enable_trace, "TRACE %u %.2lf %s -- %s" % (os.getpid(), time.time() - start, caller(), msg))
 # _trace is the same as trace except that it reports the caller as the one above who called _trace.
