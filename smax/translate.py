@@ -55,9 +55,9 @@ class {{ machine.name }}({{machine.superclass}}):
     def _in_state(self, state):
         return state in self._state
     def start(self):
-        self._reactor.call(self._{{machine|munge("enter")}})
+        self._{{machine|munge("enter")}}()
     def end(self):
-        self._reactor.call(self._{{machine|munge("unconfigure")}})
+        self._{{machine|munge("unconfigure")}}()
     # events
     {%- for ev in machine.event_list %}
     def {{ev.name}}({{ev.args|insert("self")|join(", ")}}):

@@ -47,7 +47,6 @@ def test_basic():
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
-    reactor.sync()
     assert test._a == True
     assert test._b == False
     assert test._c == False
@@ -58,7 +57,6 @@ def test_basic():
     ])
 
     test.ev_b()
-    reactor.sync()
     assert test._a == False
     assert test._b == True
     assert test._c == False
@@ -69,7 +67,6 @@ def test_basic():
     ])
 
     test.ev_b()
-    reactor.sync()
     assert test._a == False
     assert test._b == True
     assert test._c == False
@@ -80,7 +77,6 @@ def test_basic():
     ])
 
     test.ev_a()
-    reactor.sync()
     assert test._a == True
     assert test._b == False
     assert test._c == False

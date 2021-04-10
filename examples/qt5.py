@@ -57,13 +57,8 @@ machine QtTestStateMachine:
 """
 
 QtTestStateMachine = smax.load(__file__, "QtTestStateMachine", save_generated_python=".generated_state_machine.py")
-#state_machine_source = smax.load_source(__file__)
-#state_machine_spec = smax.parse(state_machine_source, __file__)
-#state_machine = smax.machine(state_machine_spec, "QtTestStateMachine")
 state_machine_spec = smax.spec(__file__)
 state_machine = smax.qt5.machine(state_machine_spec, "QtTestStateMachine")
-#python_code = smax.generate_python(state_machine_spec)
-#exec(python_code)
 
 class QtTest(QtTestStateMachine):
     def __init__(self, reactor, view, controller, state_tree):

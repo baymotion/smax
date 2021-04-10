@@ -113,14 +113,14 @@ A reactor provides the runtime environment for state machines.  Specifically,
 
 - The call to reactor.run() goes into a perpetual loop, blocking until an event is observed.  When it sees an event, it calls an event handler registered with that event.  You can call reactor.stop() to cause reactor.run() to terminate.
 - All handlers executed by the reactor run in the same thread sequentially.  If that is the only thread in your program, then you don't need any locking.
-- If you have other threads, you can call reactor.call(cb) to schedule the reactor to call cb() at the next opportunity; cb() will run in the reactor thread.  Calls are added to a queue so any number of calls can be outstanding.
-- All handlers should be non blocking: the reactor won't find the next event until the current handler returns.  If your state machine stops working, it's probably because a handler is blocking on something.
+- If you have other threads, you can call reactor.call(cb, *args) to schedule the reactor to call cb(*args) at the next opportunity; cb() will run in the reactor thread.  Calls are added to a queue so any number of calls can be outstanding.
+- All handlers should be non blocking: the reactor won't look for the next event until the current handler returns.  If your code stops running, it's probably because a handler is blocked on something.
 
-Reactor is an abstract class.  smax provides two useful implementations: SelectReactor and PyQtReactor.
+Reactor is an abstract class.  smax provides two useful implementations: smax.SelectReactor and smax.qt5.PyQtReactor.
 
-- SelectReactor has add_fd(fd, callback) and remove_fd(fd) methods and waits on file descriptors.
-- PyQtReactor integrates with PyQt4 so that its callbacks all run in the same thread as PyQt.  The means your state machine can directly read or modify the state of the UI safely.  PyQtReactor has add_fd(fd, callback) and remove_fd(fd) just like SelectReactor does.
-- reactor.after_s(seconds, cb, *cb_args) and reactor.after_ms(ms, cb, *cb_args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.
+- SelectReactor has add_fd(fd, callback) and remove_fd(fd) methods; the callback will execute when the file descriptor has data to read.
+- PyQtReactor integrates with PyQt5 so that its callbacks all run in the same thread as PyQt.  The means your state machine can directly read or modify the state of a Qt UI safely.  PyQtReactor has add_fd(fd, callback) and remove_fd(fd) just like SelectReactor does.
+- reactor.after_s(seconds, cb, *args) and reactor.after_ms(ms, cb, *args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.
 
 Sending events to your state machine is almost always done by calling the appropriate method in a reactor callback.  State machine event methods all work by queuing themselves (with calls to reactor.call()), so events can be posted to a state machine from any thread.
 
