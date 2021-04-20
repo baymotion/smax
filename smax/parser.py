@@ -2,6 +2,8 @@
 #
 
 import copy
+import io
+import pkgutil
 import smax.log as log
 import yapps.grammar
 import yapps.parsetree
@@ -43,32 +45,35 @@ def load_source(filename, delimiter="%%", start_delimiter=None, end_delimiter=No
         end_delimiter = delimiter
     log.trace("load_source filename=%s" % (filename,))
     with open(filename, "rt") as f:
-        state = 0
-        lines=[]
+        return load_file(f, start_delimiter, end_delimiter)
+
+def load_file(f, start_delimiter="%%", end_delimiter="%%"):
+    state = 0
+    lines=[]
+    while True:
         while True:
-            while True:
-                # replace with blanks
-                l = f.readline()
-                if len(l) == 0:
-                    break
-                lines.append("")
-                l = l.rstrip()
-                if l == start_delimiter:
-                    break
-            if len(l) == 0:
-                break
-            while True:
-                # copy to the output.
-                l = f.readline()
-                if len(l) == 0:
-                    break
-                l = l.rstrip()
-                if l == end_delimiter:
-                    break
-                lines.append(l)
+            # replace with blanks
+            l = f.readline()
             if len(l) == 0:
                 break
             lines.append("")
+            l = l.rstrip()
+            if l == start_delimiter:
+                break
+        if len(l) == 0:
+            break
+        while True:
+            # copy to the output.
+            l = f.readline()
+            if len(l) == 0:
+                break
+            l = l.rstrip()
+            if l == end_delimiter:
+                break
+            lines.append(l)
+        if len(l) == 0:
+            break
+        lines.append("")
     spec = "\n".join(lines)
     return spec
 
@@ -300,7 +305,9 @@ class Buffer:
         self._buffer.append(msg)
 
 def load_parser():
-    source = load_source(__file__)
+    source_data = pkgutil.get_data(__name__, "parser.py").decode("utf-8")
+    source_file = io.StringIO(source_data)
+    source = load_file(source_file)
     scanner = yapps.grammar.ParserDescriptionScanner(source, filename=__file__)
     parser = yapps.grammar.ParserDescription(scanner)
     # monkey-patch the writer so we catch the python code
