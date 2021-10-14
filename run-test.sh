@@ -4,7 +4,7 @@ set -o errexit
 set -o xtrace
 
 python3 -m venv venv
-source venv/bin/activate
+. venv/bin/activate
 pip install pytest
 pip install pyqt5
 pip install PySide2
