@@ -91,6 +91,7 @@ parser state_machine:
     token DEDENT: "faking out the scanner with something that shouldnt ever match, part 2"
     token INDENTED_CODE: "faking out the scanner with something that shouldnt ever match, part 3"
     token MACHINE: "machine"
+    token MACRO: "macro"
     token STATE: "state"
     token PASS: "pass"
     token ENTER: "enter"
@@ -121,6 +122,7 @@ parser state_machine:
     rule machine_spec:
         {{ spec = Specification() }}
         (   machine<<spec>>
+        |   macro<<spec>>
         |   constant<<spec>>
         |   import_<<spec>>      # 'import' is a keyword so we use this alias.
         )*
@@ -145,6 +147,21 @@ parser state_machine:
             )*
         DEDENT
         {{ machine.check() }}
+
+    rule macro<<spec>>:
+        MACRO NAME ':'
+        {{ macro = spec.macro(NAME) }}
+        INDENT
+            ( transition<<macro>>
+            | timeout<<macro>>
+            | inner_states<<macro>>
+            | enter_clause              {{  macro.set_enter(enter_clause) }}
+            | exit_clause               {{  macro.set_exit(exit_clause) }}
+            | default_transition<<macro>>
+            | PASS
+            )*
+        DEDENT
+        {{ macro.check() }}
 
     rule state_machine_list<<context>>:
         [ AND ] # this allows a '---' before the first state.
@@ -449,6 +466,7 @@ class State(object):
 #       self._full_name.append(name)
 #       self.full_name = "_".join(self._full_name)
 #       self.dot_name = ".".join(self._full_name)
+        self._default_transition = None
     def check(self, machine):
         # make sure all our inner states have exactly one start state.
         for sl in self.inner_states:
@@ -537,6 +555,10 @@ class State(object):
         self.add_event(ev)
     def default_transition(self, condition, state_target, code_clause):
         t = Transition(self, None, [], condition, state_target, code_clause)
+        if condition is None:
+            if self._default_transition:
+                raise SyntaxError("State %s has multiple default transitions." % (self.name,))
+            self._default_transition = t
         self.transitions.append(t)
     def add_event(self, ev):
         self._events[ev] = ev
@@ -645,6 +667,19 @@ class Machine(State):
 #                   assert len(t.target)==1
 #                   t.target_state = self._state[t.target[0]]
 
+class Macro(Machine):
+    def __init__(self, name):
+        super(Macro, self).__init__(name, "object")
+#       self._name = name
+#       self.enter = [ ]
+#       self.exit = [ ]
+#   def context(self):
+#       return self
+#   def set_enter(self, enter):
+#       self.enter = enter
+#   def set_exit(self, exit):
+#       self.exit = exit
+
 class Specification:
     def __init__(self):
         log.trace("new Specification.")
@@ -661,3 +696,7 @@ class Specification:
         return m
     def spec(self):
         return self._output
+    def macro(self, name):
+        m = Macro(name)
+        self._output.append({"macro": m})
+        return m

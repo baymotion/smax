@@ -37,9 +37,9 @@ Some notes:
 
   * Like python, indentation is used to describe the stucture of a machine.  All the states of MyStateMachine are indented from the machine declaration, the clauses and transitions specific to a state are all indented within the declaration of the state.
 
-  * There are two states, **s_request** and **s_done**.  By convention, name all states with an **s_** prefix; all state names must be valid python identifiers.
+  * This example has two states, **s_request** and **s_done**.  By convention, name all states with an **s_** prefix; all state names must be valid python identifiers.
 
-  * States can have "enter:" and "exit:" clauses providing code which will be executed when transitioning into or out of the state.  Code can be specified on the same line as "enter:" or "exit:" (as above); multi-line code can be given by indenting on the following line:
+  * States have optional "enter:" and "exit:" clauses.  These provide code which will be executed when transitioning into or out of the state.  Code can be specified on the same line as "enter:" or "exit:" (as above); multiple lines of code can be given by indenting on the following line:
 
         *state s_request:
             enter:
@@ -47,11 +47,11 @@ Some notes:
                 self.do_more_stuff()
             s(1) -> s_request
 
-    The convention is to keep code in the state machine specification to a minimum; usually just a single method call.  Putting more than a few lines of code in the state machine clauses can hide the structure--and there are a lot of places you can attach code.  It's better to have the state machine call a method which does what you want, and implement that callback in a subclass or superclass.
+    Best practice is to keep code in the state machine specification to a minimum, usually just a call to a method which you'll implement elsewhere (e.g. subclass or superclass).  Putting more than a few lines of code in the state machine clauses will hide the machine structure--and there are a lot of places you can attach code.  It's better to have the state machine call a method which does what you want, and implement that callback elsewhere.
 
   * **s_request** is the _default_ state, indicated by the **\*** in front of the reserved word **state**.  Unless otherwise requested, starting the state machine will always enter this state, executing the code in its enter clause.
 
-  * **s(1) -> s_request** is a _timed_ transition.  If we enter this state, and don't execute another transition within 1 second, we'll exit **s_request**, enter **s_request** again, and execute the code in its enter clause again.  Any other transition will cause the timed transition to be forgotten.  In the absence of an **ev_ack**, this loop  will go on forever.  **s(n)** is used to indicate a timeout in terms of seconds; **ms(n)** is also available to specify timeouts in milliseconds.  Floating point values are allowed in both cases; timeouts do not need to be constant values, and will be evaluated at the time the state is entered.
+  * **s(1) -> s_request** is a _timed_ transition.  If we enter this state, and don't execute another transition within 1 second, we'll exit **s_request**, enter **s_request** again, re-executing the code in its enter clause.  Any other transition will cause the timed transition to be forgotten.  In the absence of an **ev_ack**, this loop will go on forever.  **s(n)** is used to indicate a timeout in terms of seconds; **ms(n)** is also available to specify timeouts in milliseconds.  Floating point values are allowed in both cases; timeouts do not need to be constant values, and will be evaluated at the time the state is entered.
 
   * This state machine has one event, **ev_ack**.  The generated state machine will have an **ev_ack** method, which does nothing unless you're in the **s_request** state, in which case it causes the state machine to exit **s_request** and enter **s_done**.
 
@@ -67,9 +67,9 @@ Most commonly, the state machine is presented within "%%" marks in the same pyth
     %%
     """
 
-Smax has a "load_source" method that reads the input file, filtering all lines not inside the "%%" sections.  There can be many of these sections in a given input file.
+Smax has a "load_source" method that reads a given file, filtering all lines not inside the "%%" sections.  There can be many of these sections in a given input file.
 
-Smax will translate the state machine specification and generate an implementation class called MyStateMachine, named per the **machine** statement.  Here is an excerpt from the generated code:
+Smax will translate the state machine specification and generate an implementation class named by the **machine** clause (MyStateMachine).  Here is an excerpt from the generated code:
 
     class MyStateMachine(object):
         def __init__(self, reactor):
@@ -81,7 +81,7 @@ Smax will translate the state machine specification and generate an implementati
         def ev_ack(self):
             ...
 
-By convention, application code subclasses MyStateMachine and the subclass provides the methods that MyStateMachine will call:
+A common approach is for application code to subclass MyStateMachine and provide the methods that MyStateMachine will call:
 
     class MyDevice(MyStateMachine):
         def __init__(self, reactor, serial_port_filename):
@@ -97,6 +97,9 @@ A Reactor instance provides the runtime support for timing and queues that the s
 
     def main():
         # Create a runtime environment that drives the state machine
+        # SelectReactor uses the "select" call to block until
+        # an alarm expires; you can attach your own handlers
+        # to it to call events on the state machine.
         reactor = smax.SelectReactor()
         # Create the state machine instance itself
         my_device = MyDevice(reactor, "/dev/ttyS0")
@@ -111,18 +114,16 @@ A single reactor instance can handle any number of state machines.  Once you hav
 
 A reactor provides the runtime environment for state machines.  Specifically,
 
-- The call to reactor.run() goes into a perpetual loop, blocking until an event is observed.  When it sees an event, it calls an event handler registered with that event.  You can call reactor.stop() to cause reactor.run() to terminate.
+- The call to reactor.run() goes into a perpetual loop, blocking until an event is observed.  When it sees an event, it calls a handler registered with that event.  You can call reactor.stop() to queue an event that will cause reactor.run() to terminate.
 - All handlers executed by the reactor run in the same thread sequentially.  If that is the only thread in your program, then you don't need any locking.
 - If you have other threads, you can call reactor.call(cb, *args) to schedule the reactor to call cb(*args) at the next opportunity; cb() will run in the reactor thread.  Calls are added to a queue so any number of calls can be outstanding.
-- All handlers should be non blocking: the reactor won't look for the next event until the current handler returns.  If your code stops running, it's probably because a handler is blocked on something.
+- All handlers should be non blocking: the reactor won't look for the next event until the current handler returns.  If your machine stops running, it's probably because a handler is blocked on something.
 
 Reactor is an abstract class.  smax provides two useful implementations: smax.SelectReactor and smax.qt5.PyQtReactor.
 
 - SelectReactor has add_fd(fd, callback) and remove_fd(fd) methods; the callback will execute when the file descriptor has data to read.
 - PyQtReactor integrates with PyQt5 so that its callbacks all run in the same thread as PyQt.  The means your state machine can directly read or modify the state of a Qt UI safely.  PyQtReactor has add_fd(fd, callback) and remove_fd(fd) just like SelectReactor does.
 - reactor.after_s(seconds, cb, *args) and reactor.after_ms(ms, cb, *args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.
-
-Sending events to your state machine is almost always done by calling the appropriate method in a reactor callback.  State machine event methods all work by queuing themselves (with calls to reactor.call()), so events can be posted to a state machine from any thread.
 
 Going back to our example, let's show how ev_ack should be called.  We'll use select_reactor to get a callback when serial port data is ready:
 
@@ -135,6 +136,8 @@ class MyDevice(MyStateMachine):
     def data_ready(self):
         """Called when data is available on the serial port."""
         data = os.read(self._fd, 65536)
+        # A more realistic example would accumulate read data
+        # until we have at least len(b"ACK") bytes available
         if data == b"ACK;":
             self.ev_ack()
 ```
@@ -143,7 +146,7 @@ class MyDevice(MyStateMachine):
 
 The above example assumes that the call to self.send() is always available-- but I happen to be working with equipment that is connected by a USB to RS232 adapter.  This creates a few new requirements:
 
-  * The USB adapter can be disconnected--don't send data when the device disappears.
+  * The USB adapter can be disconnected--you can't send data when the device disappears.
   * Linux's udev can report the presence of the USB device several seconds before an open to the device will succeed, so retries on the open are required after the USB device is found.
 
 Here's one way to accommodate these new requirements:

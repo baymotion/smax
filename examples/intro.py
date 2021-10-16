@@ -52,6 +52,8 @@ machine NotVeryUseful:
 # generated files;
 state_machine_source = smax.load_source(__file__)
 python_source = smax.translate(state_machine_source, __file__)
+with open("/tmp/intro_state_machine.py", "wt") as f:
+    f.write('r"""\n%s\n"""\n%s' % (state_machine_source, python_source))
 module = smax.compile_python(python_source)
 MyStateMachine = module.MyStateMachine
 # But this way is easier.

@@ -3,11 +3,18 @@
 set -o errexit
 set -o xtrace
 
-python3 -m venv venv
-. venv/bin/activate
-pip install pytest
-pip install pyqt5
-pip install PySide2
+python3 -m venv _python
+#source venv/bin/activate
+_python/bin/pip install pytest
+_python/bin/pip install pyqt5
+_python/bin/pip install PySide2
+_python/bin/pip install pudb
+_python/bin/pip install pytest-pudb
 #python3 setup.py install
-python3 setup.py develop
-pytest -s test
+_python/bin/python3 setup.py develop
+
+_python/bin/pytest -s test
+#_python/bin/pytest --pudb -s test/test_conditions.py
+#_python/bin/pytest -s test/test_conditions.py
+#_python/bin/pytest -s test/test_basic.py
+#_python/bin/pytest -s test/test_debounce.py

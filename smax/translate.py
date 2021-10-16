@@ -74,7 +74,7 @@ class {{ machine.name }}({{machine.superclass}}):
         {%- else %}{# state.parent #}
         self._{{state|munge("configure")}}()
         {%- endif %}{# state.parent #}
-    def _{{state|munge("configure")}}(self, clist=None):
+    def _{{state|munge("configure")}}(self, configurators=None):
         {%- set condition=["if"] %}
         {%- for or_peer in state.or_with %}
         {{condition[0]}} self._in_state(self.{{or_peer.full_name}}):
@@ -98,9 +98,9 @@ class {{ machine.name }}({{machine.superclass}}):
         {%- else %}{# state.timeouts #}
         self._record_state(self.{{state.full_name}}, [])
         {%- endif %}{# state.timeouts #}
-        if clist is None:
-            clist = [{{state|child_list|join(", ")}}]
-        for c in clist:
+        if configurators is None:
+            configurators = [{{state|child_list|join(", ")}}]
+        for c in configurators:
             c()
         {{-state|transitions()|indent(8)}}
     def _{{state|munge("unconfigure")}}(self):
@@ -116,7 +116,7 @@ class {{ machine.name }}({{machine.superclass}}):
         timeout_list = self._unrecord_state(self.{{state.full_name}})
         for t in timeout_list:
             self._state_machine_cancel_timeout(t)
-        {{ state.exit|code|indent(8) }}
+        {{ state.exit|code("exit")|indent(8) }}
     {%- for event in machine.event_list %}
     {%- if event in state._events %}
     def _{{state.full_name}}_{{event.name}}({{event.args|insert("self")|join(", ")}}):
@@ -179,6 +179,7 @@ r = True
 {%- endif %}{# transition.condition #}
 """)
     r = [ ]
+    already_has_default_transition = False
     for transition in state.transitions:
         if transition.event == event:
             quoted = lambda s: "\"%s\"" % s
@@ -188,6 +189,10 @@ r = True
                 event_args.extend([quoted(s) for s in event.args])
             else:
                 event_args.append(None)
+                # there should only be at most one of these.
+                assert already_has_default_transition == False
+                if not transition.condition:
+                    already_has_default_transition = True
             r.append(t.render(
                     transition=transition,
                     state=state,
@@ -197,7 +202,7 @@ r = True
 
 def configure(state):
     t = environment.from_string(r"""
-{{state.enter|code}}
+{{state.enter|code("enter")}}
 """)
     return t.render(state=state)
 
@@ -208,9 +213,9 @@ def timeouts(state):
             % (t.time_spec.scale, t.time_spec.timeout, munge(state, "timeout", n)))
     return r
 
-def code(c):
+def code(c, context):
     if not c or (len(c) == 0):
-        return "pass # (no code was specified)"
+        return "pass # (no %s code was specified)" % (context,)
     return "\n".join(c)
 
 def goto(transition):
@@ -238,7 +243,7 @@ def _{{transition|transition_name}}({{args|insert("self")|join(", ")}}):
     self._{{transition.state|munge("unconfigure")}}()
     {%- endif %}{# transition.unconfigure #}
     # transition code
-    {{ transition.code|code|indent(4) }}
+    {{ transition.code|code("transition")|indent(4) }}
     {%- if transition.target_state %}
     self._{{transition.target_state|munge("configure")}}()
     {%- endif %}{# transition.target_state #}

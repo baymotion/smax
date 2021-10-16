@@ -131,3 +131,6 @@ dmypy.json
 # smax
 .generated_state_machine.py
 .translate.yaml
+test/.generated.*
+*.swp
+_python/*
