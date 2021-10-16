@@ -1,20 +1,31 @@
 #
 
+import importlib
+import os.path
 import queue
 import smax
 import smax.log as log
 import types
 
-def compile_state_machine(filename, generated_source_filename=".generated_state_machine.py"):
+def compile_state_machine(filename, generated_source_filename="%(dirname)s/.generated.%(basename)s"):
     state_machine_source = smax.load_source(filename)
     python_code = smax.translate(state_machine_source, filename)
     if generated_source_filename:
-        with open(generated_source_filename, "wt") as f:
+        dirname, basename = os.path.split(filename)
+        out_filename = generated_source_filename % locals()
+        with open(out_filename, "wt") as f:
             f.write(python_code)
-            f.write('r"""\n')
+            f.write('\nr"""\n')
             f.write(state_machine_source)
             f.write('"""\n')
-    return smax.compile_python(python_code)
+        # this trick lets pudb find the source code.
+        module_name = basename.rstrip(".py") + "%04X" % (hash(state_machine_source) & 0xFFFF,)
+        module_spec = importlib.util.spec_from_file_location(module_name, out_filename)
+        module = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(module)
+    else:
+        module = smax.compile_python(python_code)
+    return module
 
 def wrap(state_machine_class):
     """

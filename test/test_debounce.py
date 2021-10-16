@@ -1,19 +1,44 @@
-# test_basic.py - Basic one-level state machine
-# behavior:
-#   ev_a goes to s_a,
-#   ev_b goes to s_b.
-# Proves that we go to the intended
-# states and not the unintended ones.
+#
+# test_debounce.py - Instantiate several switch debouncing
+#   machines.
+#
 
 import smax
 from smax import log
-import sys
 import utils
 
 r"""
 %%
 
 import smax.log as log
+
+macro DebouncedSwitch:
+    enter:
+        log.trace("DebouncedSwitch: enter")
+    exit:
+        log.trace("DebouncedSwitch: exit")
+    [is_down()] -> s_down
+    *state s_up:
+        enter:
+            self.ignore()
+            self.up()
+        ev_up: pass
+        ev_down: pass
+        ms(2) -> s_up_ready
+    state s_up_ready:
+        enter:
+            self.listen()
+        [is_down()] -> s_down
+        ev_up: pass
+        ev_down: s_down
+    state s_down:
+        enter: self.down()
+        ev_up: pass
+        ev_down: pass
+    state s_down_ready:
+        [not is_down()] -> s_up
+        ev_up: s_up
+        ev_down: pass
 
 machine TestMachine:
     enter:
@@ -41,7 +66,7 @@ machine TestMachine:
 %%
 """
 
-def test_basic():
+def test_debounce():
     module = utils.compile_state_machine(__file__)
     Test = utils.wrap(module.TestMachine)
     reactor = smax.SelectReactor()
