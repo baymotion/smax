@@ -86,7 +86,6 @@ def state_tree(machine, tree_widget):
     last = None
     items = [ ]
     for s in states(machine):
-        print("s=%s" % (s,))
         if s == NEST:
             parent.insert(0, last)
             continue
