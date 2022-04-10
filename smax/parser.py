@@ -119,8 +119,7 @@ parser state_machine:
     ignore: r"#.*"      # comments
     ignore: r"[ \r\t\n]+"
 
-    rule machine_spec:
-        {{ spec = Specification() }}
+    rule machine_spec<<spec>>:
         (   machine<<spec>>
         |   macro<<spec>>
         |   constant<<spec>>
@@ -399,7 +398,8 @@ class Parser(state_machine):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
     def parse(self):
-        return self.machine_spec()
+        spec = Specification()
+        return self.machine_spec(spec)
 
 class SyntaxError(Exception):
     pass
