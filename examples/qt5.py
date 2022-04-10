@@ -72,9 +72,11 @@ class QtTest(QtTestStateMachine):
     def done(self):
         self._controller.close()
     def _state_machine_enter(self, state_name):
-        self._state_tree[state_name].setCheckState(0, QtCore.Qt.Checked)
+        s = ".".join(state_name)
+        self._state_tree[s].setCheckState(0, QtCore.Qt.Checked)
     def _state_machine_exit(self, state_name):
-        self._state_tree[state_name].setCheckState(0, QtCore.Qt.Unchecked)
+        s = ".".join(state_name)
+        self._state_tree[s].setCheckState(0, QtCore.Qt.Unchecked)
 
 def main():
     app = QApplication(sys.argv)
