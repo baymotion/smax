@@ -492,6 +492,8 @@ class State(object):
             s = p
         self.full_name = "_".join(u)
         self.dot_name = ".".join(d)
+        self.name_list = d
+        self.array_name = self.full_name + "_name"
         log.trace("%s: full_name=%s, dot_name=%s." % (self, self.full_name, self.dot_name))
         target_name = "n/a"
         n = 0 # in case transitions is empty

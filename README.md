@@ -123,16 +123,16 @@ Reactor is an abstract class.  smax provides two useful implementations: smax.Se
 
 - SelectReactor has add_fd(fd, callback) and remove_fd(fd) methods; the callback will execute when the file descriptor has data to read.
 - PyQtReactor integrates with PyQt5 so that its callbacks all run in the same thread as PyQt.  The means your state machine can directly read or modify the state of a Qt UI safely.  PyQtReactor has add_fd(fd, callback) and remove_fd(fd) just like SelectReactor does.
-- reactor.after_s(seconds, cb, *args) and reactor.after_ms(ms, cb, *args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.
+- reactor.after_s(seconds, cb, *args) and reactor.after_ms(ms, cb, *args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.  after_s and after_ms are specified to accept floating point values.
 
 Going back to our example, let's show how ev_ack should be called.  We'll use select_reactor to get a callback when serial port data is ready:
 
 ```
 class MyDevice(MyStateMachine):
-...
-	def start(self)
+    ...
+    def start(self):
         super(MyDevice, self).start()
-		reactor.add_fd(self._fd, self.data_ready)
+        reactor.add_fd(self._fd, self.data_ready)
     def data_ready(self):
         """Called when data is available on the serial port."""
         data = os.read(self._fd, 65536)
@@ -260,7 +260,28 @@ Additional parallel state machine notes:
 
   * Events are observed by all active parallel states.  In this example, just after starting, both **s_a** and **s_b** will respond when **ev_x** is called.
 
-  * An event can transition to the inner state of another parallel state machine.  In this case, all the rest of the parallel states, including the one requesting the transition, will exit, then enter default states.  In the above example, calling **ev_y** in **s_a_2** will result in exiting **s_a_2** and **s_b_2**, and entering **s_a** and **s_b_3**.
+  * An event can transition to the inner state of another parallel state machine.  In this case, all the rest of the parallel states, including the one requesting the transition, will exit, then enter default states.  In the above example, calling **ev_y** in **s_a_2** will result in exiting **s_a_2** and **s_b_2**, and entering **s_a** and **s_b_3**.  At this time, there's no way to transition to more than one non-default state.
+
+  * Events can be handled within a state without a transition.  In this case, the assert is never triggered because we don't actually exit the state.
+
+        machine Example:
+            *state s_a:
+                ev_x: self.do_more_stuff()
+            exit: assert False
+
+  * Events can be specialized, allowing delegation to other handlers.  In this example, if you're in s_a and you call ev_specific(), you'll get a call to self.handle_special(); but if you're in s_b and you call ev_specific(), you'll get a call to self.handle_it(0).
+
+        machine Example:
+            ev_general(parameter): self.handle_it(parameter)
+            *state s_a:
+                ev_specific is ev_general(0) -> s_b: self.handle_special()
+            state s_b:
+                pass
+
+
+## Macros
+
+(This work is underway.)
 
 # API
 
@@ -289,7 +310,7 @@ State machines keep track of the states they're in and use reactors to queue up 
         def cancel_after(self, r):
             ...
 
-Smax provides some additional methods that your program can call:
+Note that after_s and after_ms are specified to accept floating point values, so after_s(.001, ...) is equivalent to after_ms(1), and the reactor is specified to wait for at least the given time.  Smax provides some additional methods that your program can call:
 
     class Reactor: # Continued...
         # Call all the callbacks currently queued, including
@@ -300,4 +321,13 @@ Smax provides some additional methods that your program can call:
         # then returns None.
         def sync(self):
             ...
+## State machine debugging
 
+State machine behavior can be observed by overriding a handful of methods in the generated code.  state_name is an array of strings representing the name of the nested state; these are frequently represented using ".".join(state_name).
+
+  * _state_machine_enter(self, state_name) is called when the as the state is entered.
+  * _state_machine_exit(self, state_name) is called when the before the state is exited.
+  * _state_machine_handle(self, state_name, event_name) is called when a state is handling the given event.
+  * _state_machine_timeout(self, state_name, time_spec) is called when a state reaches a timeout; time_spec is a printable string taken from the time specification in the state machine specification.
+  * _state_machine_ignored(self, event_name, *args) is called when no currently active state has a handler for the given event.
+  * _state_machine_debug(self, message) -- by default, the above methods will call _state_machine_debug with a relevant value for the message parameter.

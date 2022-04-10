@@ -52,17 +52,21 @@ def wrap(state_machine_class):
         def _state_machine_debug(self, msg):
             log._trace("%s %s (state=%s)" % (self, msg, self._state.keys()))
         def _state_machine_enter(self, state_name):
-            log._debug("%s entering %s" % (self, state_name))
-            self._q.put( (self.ENTERED, state_name) )
+            s = ".".join(state_name)
+            log._debug("%s entering %s" % (self, s))
+            self._q.put( (self.ENTERED, s) )
         def _state_machine_exit(self, state_name):
-            log._debug("%s exiting %s" % (self, state_name))
-            self._q.put( (self.EXITED, state_name) )
+            s = ".".join(state_name)
+            log._debug("%s exiting %s" % (self, s))
+            self._q.put( (self.EXITED, s) )
         def _state_machine_handle(self, state_name, event_name, *args):
-            log._debug("%s state %s handling %s" % (self, state_name, event_name))
-            self._q.put( (self.HANDLED, state_name, event_name) )
+            s = ".".join(state_name)
+            log._debug("%s state %s handling %s" % (self, s, event_name))
+            self._q.put( (self.HANDLED, s, event_name) )
         def _state_machine_timeout(self, state_name, time_spec):
-            log._debug("%s state %s timed out after %s" % (self, state_name, time_spec))
-            self._q.put( (self.TIMED_OUT, state_name, time_spec) )
+            s = ".".join(state_name)
+            log._debug("%s state %s timed out after %s" % (self, s, time_spec))
+            self._q.put( (self.TIMED_OUT, s, time_spec) )
         def _state_machine_ignored(self, event_name, *args):
             log._debug("%s ignored %s" % (self, event_name))
             self._q.put( (self.IGNORED, event_name) )

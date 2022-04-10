@@ -18,6 +18,7 @@ def machine(m):
 class {{ machine.name }}({{machine.superclass}}):
     # Make some printable strings to help diagnostics.
     {%- for state in machine.all_states() %}
+    {{state.array_name}} = {{state.name_list|as_list}}
     {{state.full_name}} = "{{state.dot_name}}"
     {%- endfor %}{# state in machine.all_states() #}
     def __init__(self, reactor, debug_enable=False):
@@ -29,15 +30,15 @@ class {{ machine.name }}({{machine.superclass}}):
             print("DEBUG -- %s, state=%s." % (msg, ",".join(self._state.keys())))
     # for diagnostic only
     def _state_machine_enter(self, state_name):
-        self._state_machine_debug("Entering %s" % state_name)
+        self._state_machine_debug("Entering %s" % ".".join(state_name))
     # for diagnostic only
     def _state_machine_exit(self, state_name):
-        self._state_machine_debug("Exiting %s" % state_name)
+        self._state_machine_debug("Exiting %s" % ".".join(state_name))
     # for diagnostic only
     def _state_machine_handle(self, state_name, event_name, *args):
-        self._state_machine_debug("%s handling %s" % (state_name, event_name))
+        self._state_machine_debug("%s handling %s" % (".".join(state_name), event_name))
     def _state_machine_timeout(self, state_name, time_spec):
-        self._state_machine_debug("%s timed out after %s" % (state_name, time_spec))
+        self._state_machine_debug("%s timed out after %s" % (".".join(state_name), time_spec))
     def _state_machine_ignored(self, event_name, *args):
         self._state_machine_debug("Ignored %s" % event_name)
     def _state_machine_call_after_s(self, seconds, callback, context):
@@ -87,7 +88,7 @@ class {{ machine.name }}({{machine.superclass}}):
             self._{{state.parent|munge("configure")}}([{{state|configure_list|join(", ")}}])
             return
         {%- endif %}{# state.parent #}
-        self._state_machine_enter("{{state.dot_name}}")
+        self._state_machine_enter(self.{{state.array_name}})
         {{-state|configure|indent(8)}}
         {%- if state.timeouts %}
         self._record_state(self.{{state.full_name}}, [
@@ -112,7 +113,7 @@ class {{ machine.name }}({{machine.superclass}}):
         {%- set _ = condition.append("elif" if condition.pop() else "if") %}
         {%- endfor %}{# s in sl #}
         {%- endfor %}{# sl in state.inner_states #}
-        self._state_machine_exit("{{state.dot_name}}")
+        self._state_machine_exit(self.{{state.array_name}})
         timeout_list = self._unrecord_state(self.{{state.full_name}})
         for t in timeout_list:
             self._state_machine_cancel_timeout(t)
@@ -153,7 +154,7 @@ class {{ machine.name }}({{machine.superclass}}):
         if not ({{timeout.condition}}):
             return
         {%- endif %}{# timeout.condition #}
-        self._state_machine_timeout("{{state.dot_name}}", "{{timeout.time_spec.timeout}}{{timeout.time_spec.scale}}")
+        self._state_machine_timeout(self.{{state.array_name}}, "{{timeout.time_spec.timeout}}{{timeout.time_spec.scale}}")
         {{-timeout|goto|indent(8)}}
     {%- endfor %}{# timeout in state.timeouts #}
     {%- for transition in state._transition_methods %}
@@ -183,7 +184,7 @@ r = True
     for transition in state.transitions:
         if transition.event == event:
             quoted = lambda s: "\"%s\"" % s
-            event_args = [quoted(state.dot_name)]
+            event_args = ["self." + state.full_name + "_name"]
             if event:
                 event_args.append(quoted(event.name))
                 event_args.extend([quoted(s) for s in event.args])
@@ -288,6 +289,10 @@ def child_list(state):
                 l.append("self._%s" % munge(s, "configure"))
     return l
 
+def as_list(l):
+    r = ["\"%s\"" % i for i in l]
+    return "[%s]" % ",".join(r)
+
 environment.filters["machine"] = machine
 environment.filters["munge"] = munge
 environment.filters["insert"] = insert
@@ -300,6 +305,7 @@ environment.filters["configure_list"] = configure_list
 environment.filters["child_list"] = child_list
 environment.filters["transition_name"] = transition_name
 environment.filters["transition_method"] = transition_method
+environment.filters["as_list"] = as_list
 
 def parse(source, filename):
     scanner = Scanner(source, filename=filename)

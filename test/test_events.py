@@ -1,4 +1,4 @@
-# events.py - See basic.py, except that
+# test_events.py - See test_basic.py, except that
 # the events are handled in the current
 # state, instead of overall.
 
