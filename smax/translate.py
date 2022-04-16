@@ -6,7 +6,6 @@ import smax.log as log
 from smax.parser import *
 import time
 import sys
-import yaml
 
 environment = jinja2.Environment()
 
@@ -338,31 +337,11 @@ def generate_python(spec):
 {%- endif %}
 {%- endfor %}
 """)
-    s = t.render(spec)
+    s = t.render(spec) + "\n"
     return s
-
-def generate_yaml(spec):
-    # When dumping to yaml, hide the fields
-    # beginning with underscore.
-    def hide_underscores(dumper, o):
-        r = { }
-        for k, v in o.__dict__.items():
-            if k.startswith("_"):
-                continue
-            r[k] = v
-        return dumper.represent_mapping(
-            "tag:yaml.org,2002:python/object:%s" % (o.__class__.__name__),
-            r)
-    yaml.add_multi_representer(object, hide_underscores)
-    y = yaml.dump(spec, default_flow_style=False)
-    return y
 
 def translate(source, filename, yaml_filename=None):
     spec = parse(source, filename)
-    if yaml_filename:
-        y = generate_yaml(spec)
-        with open(yaml_filename, "wt") as f:
-            f.write(y)
     code = generate_python(spec)
-    return code
+    return spec, code
 

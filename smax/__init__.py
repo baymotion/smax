@@ -5,7 +5,7 @@ import types
 from .parser import load_source
 from .reactor import Reactor
 from .select_reactor import SelectReactor
-from .translate import parse, generate_python, generate_yaml, translate
+from .translate import parse, generate_python, translate
 
 def compile_python(python_code, module_name="state_machine"):
     """
