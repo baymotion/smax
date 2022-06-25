@@ -26,12 +26,12 @@ machine LightMachine:
 
 # You can observe the intermediate stages by looking
 # at values returned here
-light_machine_spec = smax.load_source(__file__)
-light_machine_python = smax.translate(light_machine_spec, __file__)
+light_machine_source = smax.load_source(__file__)
+light_machine_spec, light_machine_python = smax.translate(light_machine_source, __file__)
 light_machine_module = smax.compile_python(light_machine_python)
 LightMachine = light_machine_module.LightMachine
 # Or you can do it in one step.
-LightMachine = smax.compile(__file__, "LightMachine")
+LightMachine = smax.load(__file__, "LightMachine")
 
 class Light(LightMachine):
     def __init__(self, q):

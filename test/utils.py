@@ -9,7 +9,7 @@ import types
 
 def compile_state_machine(filename, generated_source_filename="%(dirname)s/.generated.%(basename)s"):
     state_machine_source = smax.load_source(filename)
-    python_code = smax.translate(state_machine_source, filename)
+    machine_spec, python_code = smax.translate(state_machine_source, filename)
     if generated_source_filename:
         dirname, basename = os.path.split(filename)
         out_filename = generated_source_filename % locals()

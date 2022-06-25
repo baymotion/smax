@@ -3,7 +3,11 @@
 # Reactor that works with PyQt5 so that the entire application
 # works in a single thread.
 
-from PyQt5 import QtCore, QtGui, uic, QtWidgets
+try:
+    from PyQt5 import QtCore, QtGui, QtWidgets
+except ModuleNotFoundError:
+    from PySide2 import QtCore, QtGui, QtWidgets
+
 import smax
 import smax.log as log
 

@@ -33,11 +33,9 @@ def _load(filename):
         module = compile_python(python_code)
     return source, spec, python_code, module
 
-def load(filename, class_name, save_generated_python=None):
+def load(filename, class_name, save_generated_python=lambda s: None):
     source, spec, python_code, module = _load(filename)
-    if save_generated_python:
-        with open(save_generated_python, "wt") as f:
-            f.write(python_code)
+    save_generated_python(python_code)
     return module.__dict__[class_name]
 
 def spec(filename):

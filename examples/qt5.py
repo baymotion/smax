@@ -56,7 +56,10 @@ machine QtTestStateMachine:
 %%
 """
 
-QtTestStateMachine = smax.load(__file__, "QtTestStateMachine", save_generated_python=".generated_state_machine.py")
+def save_generated_python(s):
+    with open(".generated_state_machine.py", "wt") as f:
+        f.write(s)
+QtTestStateMachine = smax.load(__file__, "QtTestStateMachine", save_generated_python=save_generated_python)
 state_machine_spec = smax.spec(__file__)
 state_machine = smax.qt5.machine(state_machine_spec, "QtTestStateMachine")
 

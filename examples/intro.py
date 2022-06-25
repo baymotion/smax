@@ -51,18 +51,21 @@ machine NotVeryUseful:
 # This approach allows observation of all the intermediate
 # generated files;
 state_machine_source = smax.load_source(__file__)
-python_source = smax.translate(state_machine_source, __file__)
+machine_spec, python_source = smax.translate(state_machine_source, __file__)
 with open("/tmp/intro_state_machine.py", "wt") as f:
     f.write('r"""\n%s\n"""\n%s' % (state_machine_source, python_source))
 module = smax.compile_python(python_source)
 MyStateMachine = module.MyStateMachine
 # But this way is easier.
-MyStateMachine = smax.load(__file__, "MyStateMachine", save_generated_python=".generated_state_machine.py")
-# This way helps debugging.
-generated_python_filename=".generated_state_machine.py"
-smax.load(__file__, "MyStateMachine", save_generated_python=generated_python_filename)
+MyStateMachine = smax.load(__file__, "MyStateMachine")
+# This way helps debugging: when loaded this way, you can step through
+# the generated state machine with e.g. pudb.
+def generated_python_python(s):
+    with open(".generated_state_machine.py", "wt") as f:
+        f.write(s)
+smax.load(__file__, "MyStateMachine", save_generated_python=generated_python_python)
 import importlib.util
-spec = importlib.util.spec_from_file_location("state_machine", generated_python_filename)
+spec = importlib.util.spec_from_file_location("state_machine", ".generated_state_machine.py")
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 MyStateMachine = m.MyStateMachine

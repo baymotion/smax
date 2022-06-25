@@ -67,21 +67,18 @@ Most commonly, the state machine is presented within "%%" marks in the same pyth
     %%
     """
 
-Smax has a "load_source" method that reads a given file, filtering all lines not inside the "%%" sections.  There can be many of these sections in a given input file.
+Smax has a "load" method that reads a given file, filtering all lines not inside the "%%" sections.  There can be many of these sections in a given input file.  The canonical method for running this state machine is to ask smax to translate the machine source, then subclass the generated class with methods that actually perform the functions requested.  A Reactor instance provides the runtime support for timing and queues that the state machine uses to update itself.  To run this state machine,
 
-Smax will translate the state machine specification and generate an implementation class named by the **machine** clause (MyStateMachine).  Here is an excerpt from the generated code:
-
-    class MyStateMachine(object):
-        def __init__(self, reactor):
-            ...
-        def start(self):
-            ...
-        def end(self):
-            ...
-        def ev_ack(self):
-            ...
-
-A common approach is for application code to subclass MyStateMachine and provide the methods that MyStateMachine will call:
+    # Python code
+    import os
+    import smax
+    r"""
+    %%
+    machine MyStateMachine:
+        ...
+    %%
+    """
+    MyStateMachine = smax.load(__file__, "MyStateMachine")
 
     class MyDevice(MyStateMachine):
         def __init__(self, reactor, serial_port_filename):
@@ -92,8 +89,6 @@ A common approach is for application code to subclass MyStateMachine and provide
         def do_more_stuff(self):
             # Super important functionality goes here.
             pass
-
-A Reactor instance provides the runtime support for timing and queues that the state machine uses to update itself.  To run the state machine,
 
     def main():
         # Create a runtime environment that drives the state machine
@@ -107,8 +102,23 @@ A Reactor instance provides the runtime support for timing and queues that the s
         my_device.start()
         # Run the state machine.
         reactor.run()
+        # We won't get here unless someone calls reactor.cancel.
 
 A single reactor instance can handle any number of state machines.  Once you have a reactor, you can create the state machine instance; for the state machine to enter the initial state(s) you must call "start" on it.
+
+Smax will translate the state machine specification and generate an implementation class named by the **machine** clause (MyStateMachine).  You can look at the generated code by passing an optional save_generated_python parameter to smax.load; save_generated_python will be called with the text string containing the generated python code.  Here is an excerpt from the generated code:
+
+    class MyStateMachine(object):
+        def __init__(self, reactor):
+            ...
+        def start(self):
+            ...
+        def end(self):
+            ...
+        def ev_ack(self):
+            ...
+
+All events are presented as methods you can call on the state machine instance.
 
 ### Reactor
 
