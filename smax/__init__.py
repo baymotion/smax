@@ -4,6 +4,7 @@ import types
 
 from .parser import load_source
 from .reactor import Reactor
+from .asyncio_reactor import AsyncioReactor
 from .select_reactor import SelectReactor
 from .translate import parse, generate_python, translate
 

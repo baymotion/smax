@@ -61,7 +61,8 @@ class {{ machine.name }}({{machine.superclass}}):
     # events
     {%- for ev in machine.event_list %}
     def {{ev.name}}({{ev.args|insert("self")|join(", ")}}):
-        self._{{machine.full_name}}_{{ev.name}}({{ev.args|join(", ")}})
+        m = lambda self: self._{{machine.full_name}}_{{ev.name}}({{ev.args|join(", ")}})
+        return self._reactor._run_event(self, m)
     {%- endfor %}{# ev in machine.event_list #}
     # states
     {%- for state in machine.all_states() %}

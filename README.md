@@ -4,7 +4,7 @@ Smax, pronounced "smash," is a DSL for implementing Harel state machines with a 
 
 Smax translates a state machine specification into python code which you can import, subclass, and execute.  The state machine specification is usually given between special tags in the python module that uses it; but the specification can come from a literal string or an input file.
 
-One useful definition of an object state pattern is that the object's methods behave differently depending on previous calls to that object.  Ordinary python code only allows you one definition of a method, meaning that you have to check your state inside that method.  Using smax, you provide multiple definitions of a method, and the state you're currently in decides which definition to use.
+One useful definition of an object state pattern is that the object's methods behave differently depending on previous calls to that object.  Ordinary python code only allows you one definition of a method, meaning that you have to check your state inside that method.  Using smax, you provide multiple definitions of a method (which we'll call events) and the state you're currently in decides which definition to use.
 
 Smax allows you to change your state on elapsed time as well as received events.
 
@@ -16,8 +16,8 @@ Smax allows you to change your state on elapsed time as well as received events.
   * Tiny runtime can be easily adapted, if it's not already supported
   * Generated code is pretty efficient
   * Transitions can be based on timers
-  * Both the source and generated code work nicely with diff and version
-    control tools
+  * Both the source and generated code work nicely with diff and version control tools
+  * AsyncioReactor supports state machine execution under asyncio
 
 # Examples
 
@@ -102,7 +102,7 @@ Smax has a "load" method that reads a given file, filtering all lines not inside
         my_device.start()
         # Run the state machine.
         reactor.run()
-        # We won't get here unless someone calls reactor.cancel.
+        # We won't get here unless someone calls reactor.stop.
 
 A single reactor instance can handle any number of state machines.  Once you have a reactor, you can create the state machine instance; for the state machine to enter the initial state(s) you must call "start" on it.
 
@@ -129,10 +129,11 @@ A reactor provides the runtime environment for state machines.  Specifically,
 - If you have other threads, you can call reactor.call(cb, *args) to schedule the reactor to call cb(*args) at the next opportunity; cb() will run in the reactor thread.  Calls are added to a queue so any number of calls can be outstanding.
 - All handlers should be non blocking: the reactor won't look for the next event until the current handler returns.  If your machine stops running, it's probably because a handler is blocked on something.
 
-Reactor is an abstract class.  smax provides two useful implementations: smax.SelectReactor and smax.qt5.PyQtReactor.
+Reactor is an abstract class.  smax provides some useful implementations: smax.SelectReactor, smax.AsyncioReactor, and smax.qt5.PyQtReactor.
 
 - SelectReactor has add_fd(fd, callback) and remove_fd(fd) methods; the callback will execute when the file descriptor has data to read.
 - PyQtReactor integrates with PyQt5 so that its callbacks all run in the same thread as PyQt.  The means your state machine can directly read or modify the state of a Qt UI safely.  PyQtReactor has add_fd(fd, callback) and remove_fd(fd) just like SelectReactor does.
+- AsyncioReactor is described below.
 - reactor.after_s(seconds, cb, *args) and reactor.after_ms(ms, cb, *args) schedule callbacks that will execute after the given amount of time has elapsed--this is how s() and ms() work.  Both methods return an object which can be used with reactor.cancel_after() to remove a callback from the alarm list.  It is always ok to cancel an alarm, even after it has executed.  after_s and after_ms are specified to accept floating point values.
 
 Going back to our example, let's show how ev_ack should be called.  We'll use select_reactor to get a callback when serial port data is ready:
@@ -205,7 +206,7 @@ Notes:
         Moving to s_next
         Entering s_next
 
-  * Transitions can have conditions, indicated by a condition in brackets.  When an event is called, if the code inside the brackets evalutes to False, then the transition is ignored:
+  * Transitions can have conditions, indicated by an expression in brackets.  When an event is called, if the code inside the brackets evalutes to False, then the transition is ignored:
 
         *state s_one:
             ev_event [self.condition_a()] -> s_two
@@ -304,12 +305,14 @@ State machines keep track of the states they're in and use reactors to queue up 
         def call(self, cb, *args):
             ...
         # Add a callback which will be queued after the
-        # given number of seconds have elapsed.  Returns
+        # given number of seconds have elapsed.  Seconds
+        # is a floating point value.  Returns
         # a handle which will be passed to cancel_after.
         def after_s(self, seconds, callback, *args):
             ...
         # Same as after_s except that the time
-        # is specified in milliseconds.
+        # is specified in milliseconds as a floating
+        # point value (ms=.1 means wait for 100 microseconds).
         def after_ms(self, ms, callback, *args):
             ...
         # Given a handle returned by after_s or
@@ -331,6 +334,7 @@ Note that after_s and after_ms are specified to accept floating point values, so
         # then returns None.
         def sync(self):
             ...
+
 ## State machine debugging
 
 State machine behavior can be observed by overriding a handful of methods in the generated code.  state_name is an array of strings representing the name of the nested state; these are frequently represented using ".".join(state_name).
@@ -341,3 +345,19 @@ State machine behavior can be observed by overriding a handful of methods in the
   * _state_machine_timeout(self, state_name, time_spec) is called when a state reaches a timeout; time_spec is a printable string taken from the time specification in the state machine specification.
   * _state_machine_ignored(self, event_name, *args) is called when no currently active state has a handler for the given event.
   * _state_machine_debug(self, message) -- by default, the above methods will call _state_machine_debug with a relevant value for the message parameter.
+
+## Support for asyncio coroutines
+
+To support programs using asyncio, smax provides an smax.AsyncioReactor which affects a state machine in two ways: the reactor.run method is awaitable, along with all state machine event methods.  AsyncioReactor.run is appropriate for use with asyncio.create_task; this can be run before or after state machines attach themselves to the reactor.  All event methods will, with this reactor, return futures that will actually execute the transition when the caller uses await.
+
+    def main():
+        event_loop = asyncio.get_event_loop()
+        reactor = smax.AsyncioReactor(event_loop)
+        asyncio.create_task(reactor.run())
+        # It's OK to add machines to the already running reactor.
+        my_state_machine = MyStateMachine(reactor)
+        my_state_machine.start()
+        await my_state_machine.ev_c()
+        ...
+
+In this mode, when the state machine blocks waiting for another event or timeout, control will be returned to the event loop.  Note that AsyncioReactor always serializes transitions to all its attached state machines.  It's always ok for a coroutine to call a state machine event; when run with AsyncioReactor, those calls are added to a queue that the reactor steps through sequentially.

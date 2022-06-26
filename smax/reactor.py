@@ -61,4 +61,6 @@ class Reactor(object):
         self._signal()
     def _signal(self):
         assert False
+    def _run_event(self, machine, ev):
+        ev(machine)
 
