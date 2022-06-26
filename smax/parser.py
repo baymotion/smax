@@ -353,7 +353,11 @@ class Scanner(state_machineScanner):
         # If they're looking for INDENT or DEDENT,
         # see if we're at the end-of-line followed by some
         # spaces; if the indent level changes, then pass that
-        # token back up.
+        # token back up.  We'll consider EOF to be a DEDENT
+        # if we're looking for dedent too.
+        if ("DEDENT" in restrict) and (self.pos >= len(self.input)):
+            token = yapps.runtime.Token("DEDENT", 0, self.get_pos())
+            return token
         if ("INDENT" in restrict) or ("DEDENT" in restrict):
             while True:
                 m = self._blank_line.match(self.input, self.pos)

@@ -1,3 +1,4 @@
+jinja2
 pytest
 pyqt5
 PySide2
