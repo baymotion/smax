@@ -24,6 +24,7 @@ class {{ machine.name }}({{machine.superclass}}):
         self._reactor = reactor
         self._state = { }
         self._state_machine_debug_enable = debug_enable
+        self._is_valid = False
     def _state_machine_debug(self, msg):
         if self._state_machine_debug_enable:
             print("DEBUG -- %s, state=%s." % (msg, ",".join(self._state.keys())))
@@ -55,7 +56,10 @@ class {{ machine.name }}({{machine.superclass}}):
     def _in_state(self, state):
         return state in self._state
     def start(self):
+        if self._is_valid:
+            raise RuntimeError("{{machine.name}} is already running")
         self._{{machine|munge("enter")}}()
+        self._is_valid = True
     def end(self):
         self._{{machine|munge("unconfigure")}}()
     # events
@@ -121,6 +125,8 @@ class {{ machine.name }}({{machine.superclass}}):
     {%- for event in machine.event_list %}
     {%- if event in state._events %}
     def _{{state.full_name}}_{{event.name}}({{event.args|insert("self")|join(", ")}}):
+        if not self._is_valid:
+            raise RuntimeError("{{event.name}}: {{machine.name}} is not running")
         r = False
         # Check inner states (if any)
         {%- for sl in state.inner_states %}
