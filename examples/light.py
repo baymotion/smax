@@ -3,7 +3,6 @@
 # Traffic light state machine example.
 
 import smax
-import os
 
 r"""
 %%
@@ -27,11 +26,14 @@ machine LightMachine:
 # You can observe the intermediate stages by looking
 # at values returned here
 light_machine_source = smax.load_source(__file__)
-light_machine_spec, light_machine_python = smax.translate(light_machine_source, __file__)
+light_machine_spec, light_machine_python = smax.translate(
+    light_machine_source, __file__
+)
 light_machine_module = smax.compile_python(light_machine_python)
 LightMachine = light_machine_module.LightMachine
 # Or you can do it in one step.
 LightMachine = smax.load(__file__, "LightMachine")
+
 
 class Light(LightMachine):
     def __init__(self, q):
@@ -39,12 +41,16 @@ class Light(LightMachine):
         self.red(False)
         self.yellow(False)
         self.green(False)
+
     def red(self, status):
         print("red: %s" % ("on" if status else "off"))
+
     def yellow(self, status):
         print("yellow: %s" % ("on" if status else "off"))
+
     def green(self, status):
         print("green: %s" % ("on" if status else "off"))
+
 
 def main():
     reactor = smax.SelectReactor()
@@ -52,6 +58,6 @@ def main():
     light.start()
     reactor.run()
 
-if __name__=="__main__":
-    main()
 
+if __name__ == "__main__":
+    main()

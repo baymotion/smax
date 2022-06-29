@@ -18,21 +18,20 @@ machine TestMachine:
 %%
 """
 
+
 def test_constant():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
-    assert test._started == True
+    assert test._started
     # Check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, Test.TestMachine)
-    ])
+    test.expected([(Test.ENTERED, Test.TestMachine)])
     test.end()
-    test.expected([
-        (Test.EXITED, Test.TestMachine)
-    ])
+    test.expected([(Test.EXITED, Test.TestMachine)])

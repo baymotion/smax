@@ -44,96 +44,113 @@ machine TestMachine:
 %%
 """
 
+
 def test_substates():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
             self._started = False
             self._done = False
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
-    assert test._a == True
-    assert test._a_1 == True
-    assert test._a_2 == False
-    assert test._b == False
-    assert test._c == False
+    assert test._a
+    assert test._a_1
+    assert not test._a_2
+    assert not test._b
+    assert not test._c
     # Now check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_a.s_a_1"),
-    ])
+    test.expected(
+        [
+            (Test.ENTERED, "TestMachine"),
+            (Test.ENTERED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_a.s_a_1"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._a_1 == False
-    assert test._a_2 == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine.s_a", "ev_b"),
-        (Test.EXITED, "TestMachine.s_a.s_a_1"),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert not test._a
+    assert not test._a_1
+    assert not test._a_2
+    assert test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine.s_a", "ev_b"),
+            (Test.EXITED, "TestMachine.s_a.s_a_1"),
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._a_1 == False
-    assert test._a_2 == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.IGNORED, "ev_b"),
-    ])
+    assert not test._a
+    assert not test._a_1
+    assert not test._a_2
+    assert test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.IGNORED, "ev_b"),
+        ]
+    )
 
     test.ev_a()
-    assert test._a == True
-    assert test._a_1 == True
-    assert test._a_2 == False
-    assert test._b == False
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine.s_b", "ev_a"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_a.s_a_1"),
-    ])
+    assert test._a
+    assert test._a_1
+    assert not test._a_2
+    assert not test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine.s_b", "ev_a"),
+            (Test.EXITED, "TestMachine.s_b"),
+            (Test.ENTERED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_a.s_a_1"),
+        ]
+    )
 
     test.ev_a_1()
-    assert test._a == True
-    assert test._a_1 == True
-    assert test._a_2 == False
-    assert test._b == False
-    assert test._c == False
-    test.expected([
-        (Test.IGNORED, "ev_a_1"),
-    ])
+    assert test._a
+    assert test._a_1
+    assert not test._a_2
+    assert not test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.IGNORED, "ev_a_1"),
+        ]
+    )
 
     test.ev_a_2()
-    assert test._a == True
-    assert test._a_1 == False
-    assert test._a_2 == True
-    assert test._b == False
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine.s_a.s_a_1", "ev_a_2"),
-        (Test.EXITED, "TestMachine.s_a.s_a_1"),
-        (Test.ENTERED, "TestMachine.s_a.s_a_2"),
-    ])
+    assert test._a
+    assert not test._a_1
+    assert test._a_2
+    assert not test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine.s_a.s_a_1", "ev_a_2"),
+            (Test.EXITED, "TestMachine.s_a.s_a_1"),
+            (Test.ENTERED, "TestMachine.s_a.s_a_2"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._a_1 == False
-    assert test._a_2 == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine.s_a", "ev_b"),
-        (Test.EXITED, "TestMachine.s_a.s_a_2"),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert not test._a
+    assert not test._a_1
+    assert not test._a_2
+    assert test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine.s_a", "ev_b"),
+            (Test.EXITED, "TestMachine.s_a.s_a_2"),
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )

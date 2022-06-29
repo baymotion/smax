@@ -31,38 +31,46 @@ machine TestMachine:
 %%
 """
 
+
 def test_events():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
             self._checked_more = False
             self._checked_bad = False
+
         # this always happens first
         def check_bad(self):
-            assert self._checked_bad==False
-            assert self._checked_more==False
+            assert not self._checked_bad
+            assert not self._checked_more
             self._checked_bad = True
             return False
+
         def check_more(self):
-            assert self._checked_more==False
-            assert self._checked_bad==True
+            assert not self._checked_more
+            assert self._checked_bad
             self._checked_more = True
             return False
+
         def check_good(self):
             return True
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
     # Now check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_start"),
-        (Test.HANDLED, "TestMachine.s_start", None),
-        (Test.EXITED, "TestMachine.s_start"),
-        (Test.ENTERED, "TestMachine.s_check"),
-        (Test.HANDLED, "TestMachine.s_check", None),
-        (Test.EXITED, "TestMachine.s_check"),
-        (Test.ENTERED, "TestMachine.s_good"),
-    ])
+    test.expected(
+        [
+            (Test.ENTERED, "TestMachine"),
+            (Test.ENTERED, "TestMachine.s_start"),
+            (Test.HANDLED, "TestMachine.s_start", None),
+            (Test.EXITED, "TestMachine.s_start"),
+            (Test.ENTERED, "TestMachine.s_check"),
+            (Test.HANDLED, "TestMachine.s_check", None),
+            (Test.EXITED, "TestMachine.s_check"),
+            (Test.ENTERED, "TestMachine.s_good"),
+        ]
+    )
