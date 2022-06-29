@@ -38,7 +38,8 @@ def write(enable, s):
 def trace(msg):
     write(
         enable_trace,
-        "TRACE %u %.2lf %s -- %s" % (
+        "TRACE %u %.2lf %s -- %s"
+        % (
             os.getpid(),
             time.time() - start,
             caller(),
@@ -54,7 +55,8 @@ def _trace(msg):
     """
     write(
         enable_trace,
-        "TRACE %u %.2lf %s -- %s" % (
+        "TRACE %u %.2lf %s -- %s"
+        % (
             os.getpid(),
             time.time() - start,
             caller(1),
@@ -66,7 +68,8 @@ def _trace(msg):
 def debug(msg):
     write(
         enable_debug,
-        "DEBUG %u %.2lf %s -- %s" % (
+        "DEBUG %u %.2lf %s -- %s"
+        % (
             os.getpid(),
             time.time() - start,
             caller(),
@@ -82,7 +85,8 @@ def _debug(msg):
     """
     write(
         enable_debug,
-        "DEBUG %u %.2lf %s -- %s" % (
+        "DEBUG %u %.2lf %s -- %s"
+        % (
             os.getpid(),
             time.time() - start,
             caller(1),
@@ -94,7 +98,8 @@ def _debug(msg):
 def error(msg):
     write(
         True,
-        "ERROR %u %.2lf %s -- %s" % (
+        "ERROR %u %.2lf %s -- %s"
+        % (
             os.getpid(),
             time.time() - start,
             caller(),
@@ -110,9 +115,5 @@ def _error(msg):
     """
     write(
         True,
-        "ERROR %u %.2lf %s -- %s" % (
-            os.getpid(),
-            time.time() - start,
-            caller(1),
-            msg),
+        "ERROR %u %.2lf %s -- %s" % (os.getpid(), time.time() - start, caller(1), msg),
     )

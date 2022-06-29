@@ -69,12 +69,15 @@ MyStateMachine = module.MyStateMachine
 def generated_python_python(s):  # noqa: E302
     with open(".generated_state_machine.py", "wt") as f:
         f.write(s)
+
+
 smax.load(  # noqa: E305
     __file__,
     "MyStateMachine",
     save_generated_python=generated_python_python,
 )
 import importlib.util  # noqa: E402
+
 spec = importlib.util.spec_from_file_location(
     "state_machine", ".generated_state_machine.py"
 )

@@ -412,7 +412,8 @@ class Scanner(state_machineScanner):  # noqa: F821
                 indent = len(m.group(1))
                 code = m.group(2)
                 log.trace(
-                    "indent=%u (was %u), code=%s." % (
+                    "indent=%u (was %u), code=%s."
+                    % (
                         indent,
                         self._indent[-1],
                         code,
