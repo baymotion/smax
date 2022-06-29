@@ -28,25 +28,30 @@ machine TestMachine:
 %%
 """
 
+
 def test_direct_transition():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
             self._started = False
             self._done = False
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
-    assert test._a == False
-    assert test._b == True
+    assert not test._a
+    assert test._b
 
     # Now check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_a"),
-        (Test.HANDLED, "TestMachine.s_a", None),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    test.expected(
+        [
+            (Test.ENTERED, "TestMachine"),
+            (Test.ENTERED, "TestMachine.s_a"),
+            (Test.HANDLED, "TestMachine.s_a", None),
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )

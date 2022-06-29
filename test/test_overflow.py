@@ -14,6 +14,7 @@ machine TestMachine:
 %%
 """
 
+
 def test_basic():
     module = utils.compile_state_machine(__file__)
     Test = utils.wrap(module.TestMachine)

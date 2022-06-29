@@ -1,7 +1,6 @@
 # test_event_specialization.py
 
 import smax
-import smax.log as log
 import utils
 
 # Sending ev_general always goes to s_general;
@@ -48,108 +47,131 @@ machine TestMachine:
 %%
 """
 
+
 def test_event_specialization():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
             self._started = False
             self._done = False
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
-    assert test._a == True
-    assert test._general == False
-    assert test._general_parameter == None
-    assert test._b == False
-    assert test._specific == False
+    assert test._a
+    assert not test._general
+    assert test._general_parameter is None
+    assert not test._b
+    assert not test._specific
 
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_a")
-    ])
+    test.expected(
+        [
+            (Test.ENTERED, "TestMachine"),
+            (Test.ENTERED, "TestMachine.s_a"),
+        ]
+    )
 
     test.ev_general(1)
-    assert test._a == False
-    assert test._general == True
+    assert not test._a
+    assert test._general
     assert test._general_parameter == 1
-    assert test._b == False
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_general"),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_general"),
-    ])
+    assert not test._b
+    assert not test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_general"),
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_general"),
+        ]
+    )
 
     test.ev_reset()
-    assert test._a == True
-    assert test._general == False
+    assert test._a
+    assert not test._general
     assert test._general_parameter == 1
-    assert test._b == False
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_reset"),
-        (Test.EXITED, "TestMachine.s_general"),
-        (Test.ENTERED, "TestMachine.s_a"),
-    ])
+    assert not test._b
+    assert not test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_reset"),
+            (Test.EXITED, "TestMachine.s_general"),
+            (Test.ENTERED, "TestMachine.s_a"),
+        ]
+    )
 
     # in this case, ev_specific is handled as ev_general(0)
     test.ev_specific()
-    assert test._a == False
-    assert test._general == True
+    assert not test._a
+    assert test._general
     assert test._general_parameter == 0
-    assert test._b == False
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_general"), # because ev_specific wasn't handled
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_general"),
-    ])
+    assert not test._b
+    assert not test._specific
+    test.expected(
+        [
+            (
+                Test.HANDLED,
+                "TestMachine",
+                "ev_general",
+            ),  # because ev_specific wasn't handled
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_general"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._general == False
+    assert not test._a
+    assert not test._general
     assert test._general_parameter == 0
-    assert test._b == True
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_general"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert test._b
+    assert not test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_b"),
+            (Test.EXITED, "TestMachine.s_general"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )
 
     test.ev_specific()
-    assert test._a == False
-    assert test._general == False
+    assert not test._a
+    assert not test._general
     assert test._general_parameter == 0
-    assert test._b == False
-    assert test._specific == True
-    test.expected([
-        (Test.HANDLED, "TestMachine.s_b", "ev_specific"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_specific"),
-    ])
+    assert not test._b
+    assert test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine.s_b", "ev_specific"),
+            (Test.EXITED, "TestMachine.s_b"),
+            (Test.ENTERED, "TestMachine.s_specific"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._general == False
+    assert not test._a
+    assert not test._general
     assert test._general_parameter == 0
-    assert test._b == True
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_specific"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert test._b
+    assert not test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_b"),
+            (Test.EXITED, "TestMachine.s_specific"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )
 
     test.ev_general(2)
-    assert test._a == False
-    assert test._general == True
+    assert not test._a
+    assert test._general
     assert test._general_parameter == 2
-    assert test._b == False
-    assert test._specific == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_general"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_general"),
-    ])
+    assert not test._b
+    assert not test._specific
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_general"),
+            (Test.EXITED, "TestMachine.s_b"),
+            (Test.ENTERED, "TestMachine.s_general"),
+        ]
+    )

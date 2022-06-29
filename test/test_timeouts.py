@@ -38,48 +38,58 @@ machine TestMachine:
 %%
 """
 
+
 def test_timeouts():
     module = utils.compile_state_machine(__file__)
+
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
             self._started = False
             self._done = False
+
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
-    assert test._a == True
-    assert test._b == False
+    assert test._a
+    assert not test._b
+
     def check(test=test):
-        assert test._a == False
-        assert test._b == True
-        assert test._c_100 == False
-        assert test._c_200 == False
-        test.expected([
-            (Test.ENTERED, "TestMachine"),
-            (Test.ENTERED, "TestMachine.s_a"),
-            (Test.TIMED_OUT, "TestMachine.s_a", "10ms"),
-            (Test.EXITED, "TestMachine.s_a"),
-            (Test.ENTERED, "TestMachine.s_b"),
-        ])
+        assert not test._a
+        assert test._b
+        assert not test._c_100
+        assert not test._c_200
+        test.expected(
+            [
+                (Test.ENTERED, "TestMachine"),
+                (Test.ENTERED, "TestMachine.s_a"),
+                (Test.TIMED_OUT, "TestMachine.s_a", "10ms"),
+                (Test.EXITED, "TestMachine.s_a"),
+                (Test.ENTERED, "TestMachine.s_b"),
+            ]
+        )
         test.ev_c()
-        reactor.after_s(.5, check_c)
+        reactor.after_s(0.5, check_c)
+
     def check_c(test=test):
-        assert test._a == False
-        assert test._b == False
-        assert test._c_100 == True
-        assert test._c_200 == True
-        test.expected([
-            (Test.HANDLED, "TestMachine", "ev_c"),
-            (Test.EXITED, "TestMachine.s_b"),
-            (Test.ENTERED, "TestMachine.s_c"),
-            (Test.TIMED_OUT, "TestMachine.s_c", "100ms"),
-            (Test.TIMED_OUT, "TestMachine.s_c", "200ms"),
-            (Test.TIMED_OUT, "TestMachine.s_c", "300ms"),
-            (Test.EXITED, "TestMachine.s_c"),
-            (Test.ENTERED, "TestMachine.s_d"),
-        ])
+        assert not test._a
+        assert not test._b
+        assert test._c_100
+        assert test._c_200
+        test.expected(
+            [
+                (Test.HANDLED, "TestMachine", "ev_c"),
+                (Test.EXITED, "TestMachine.s_b"),
+                (Test.ENTERED, "TestMachine.s_c"),
+                (Test.TIMED_OUT, "TestMachine.s_c", "100ms"),
+                (Test.TIMED_OUT, "TestMachine.s_c", "200ms"),
+                (Test.TIMED_OUT, "TestMachine.s_c", "300ms"),
+                (Test.EXITED, "TestMachine.s_c"),
+                (Test.ENTERED, "TestMachine.s_d"),
+            ]
+        )
         reactor.stop()
-    reactor.after_s(.5, check)
+
+    reactor.after_s(0.5, check)
     reactor.run()

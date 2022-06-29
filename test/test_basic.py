@@ -6,8 +6,6 @@
 # states and not the unintended ones.
 
 import smax
-from smax import log
-import sys
 import utils
 
 r"""
@@ -41,47 +39,56 @@ machine TestMachine:
 %%
 """
 
+
 def test_basic():
     module = utils.compile_state_machine(__file__)
     Test = utils.wrap(module.TestMachine)
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
-    assert test._a == True
-    assert test._b == False
-    assert test._c == False
+    assert test._a
+    assert not test._b
+    assert not test._c
     # Now check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_a"),
-    ])
+    test.expected(
+        [
+            (Test.ENTERED, "TestMachine"),
+            (Test.ENTERED, "TestMachine.s_a"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert not test._a
+    assert test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_b"),
+            (Test.EXITED, "TestMachine.s_a"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )
 
     test.ev_b()
-    assert test._a == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    assert not test._a
+    assert test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_b"),
+            (Test.EXITED, "TestMachine.s_b"),
+            (Test.ENTERED, "TestMachine.s_b"),
+        ]
+    )
 
     test.ev_a()
-    assert test._a == True
-    assert test._b == False
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_a"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_a"),
-    ])
+    assert test._a
+    assert not test._b
+    assert not test._c
+    test.expected(
+        [
+            (Test.HANDLED, "TestMachine", "ev_a"),
+            (Test.EXITED, "TestMachine.s_b"),
+            (Test.ENTERED, "TestMachine.s_a"),
+        ]
+    )
