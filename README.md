@@ -1,6 +1,6 @@
 # Overview
 
-Smax, pronounced "smash," is a DSL for implementing Harel state machines with a python3 back end.
+Smax, pronounced "smash," is a DSL for implementing Harel (heirarchical) state machines with a python3 back end.
 
 Smax translates a state machine specification into python code which you can import, subclass, and execute.  The state machine specification is usually given between special tags in the python module that uses it; but the specification can come from a literal string or an input file.
 
@@ -292,7 +292,10 @@ Additional parallel state machine notes:
 
 ## Macros
 
-(This work is underway.)
+Frequently, the same state machine patterns occur in multiple places within your system.  For example, consider a design with multiple input switches, all of which are noisy and need debouncing.  A very reasonable approach is to have a "Debouncer" state machine, instantiated once for each switch; specific switch updates are sent to the same named method on a specific instance; that instance would know how to send out the debounced state of that input.
+
+But consider another technique for handling this situation, which is to use a macro text substitution tool to replicate the pattern in a parent state machine.  In this case, each debouncer would run as a parallel machine within a parent state machine.  When a switch change is seen, instead of calling a common method on a specific state machine instance (as above), you'd call the switch-specific event on the parent state machine instance.  Because all active parallel machines receive all the machine's events, the debouncer now can also pay attention to global events sent to that machine (e.g. "ev_reset"); passing along debouncer results to the parent state machine becomes easy (e.g. "self.ev_switch_a_active()"); and the entire debouncer mechanism can be activated and deactivated on demand (in the same way the serial port above is deactivated when the USB controller is unplugged above).  For an example of using Jinja2 in this way, check out test/test_debounce.py.
+
 
 # API
 

@@ -63,28 +63,6 @@ with open("/tmp/intro_state_machine.py", "wt") as f:
 module = smax.compile_python(python_source)
 MyStateMachine = module.MyStateMachine
 
-# This is the most complicated way but translates the
-# source code in such a way that you can step through
-# it with e.g. pudb.
-def generated_python_python(s):  # noqa: E302
-    with open(".generated_state_machine.py", "wt") as f:
-        f.write(s)
-
-
-smax.load(  # noqa: E305
-    __file__,
-    "MyStateMachine",
-    save_generated_python=generated_python_python,
-)
-import importlib.util  # noqa: E402
-
-spec = importlib.util.spec_from_file_location(
-    "state_machine", ".generated_state_machine.py"
-)
-m = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(m)
-MyStateMachine = m.MyStateMachine
-
 
 class MyDevice(MyStateMachine):
     def __init__(self, reactor):
