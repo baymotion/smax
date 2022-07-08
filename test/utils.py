@@ -58,7 +58,7 @@ def wrap(state_machine_class):
             super(TestFramework, self).__init__(reactor)
             self._started = False
             self._done = False
-            self._q = queue.Queue()
+            self._state_machine_events = queue.Queue()
 
         def _state_machine_debug(self, msg):
             log._trace("%s %s (state=%s)" % (self, msg, self._state.keys()))
@@ -66,26 +66,26 @@ def wrap(state_machine_class):
         def _state_machine_enter(self, state_name):
             s = ".".join(state_name)
             log._debug("%s entering %s" % (self, s))
-            self._q.put((self.ENTERED, s))
+            self._state_machine_events.put((self.ENTERED, s))
 
         def _state_machine_exit(self, state_name):
             s = ".".join(state_name)
             log._debug("%s exiting %s" % (self, s))
-            self._q.put((self.EXITED, s))
+            self._state_machine_events.put((self.EXITED, s))
 
         def _state_machine_handle(self, state_name, event_name, *args):
             s = ".".join(state_name)
             log._debug("%s state %s handling %s" % (self, s, event_name))
-            self._q.put((self.HANDLED, s, event_name))
+            self._state_machine_events.put((self.HANDLED, s, event_name))
 
         def _state_machine_timeout(self, state_name, time_spec):
             s = ".".join(state_name)
             log._debug("%s state %s timed out after %s" % (self, s, time_spec))
-            self._q.put((self.TIMED_OUT, s, time_spec))
+            self._state_machine_events.put((self.TIMED_OUT, s, time_spec))
 
         def _state_machine_ignored(self, event_name, *args):
             log._debug("%s ignored %s" % (self, event_name))
-            self._q.put((self.IGNORED, event_name))
+            self._state_machine_events.put((self.IGNORED, event_name))
 
         def __repr__(self):
             return "%s@0x%X" % (type(self).__name__, id(self))
@@ -94,7 +94,7 @@ def wrap(state_machine_class):
         # currently buffered enter/exit/handle/ignored call.
         def events(self):
             while True:
-                x = self._q.get(timeout=0)
+                x = self._state_machine_events.get(timeout=0)
                 yield x
 
         # Compares the list of currently buffered calls

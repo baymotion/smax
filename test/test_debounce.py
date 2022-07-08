@@ -1,70 +1,87 @@
 # test_debounce.py - Use jinja2 to enable several debounce
-# machines.
+# machines.  You could easily instantiate several debouncing
+# state machine instances, but using jinja to pull them
+# all into a single state machine allows them to all listen
+# to common events (which isn't used here).
 
+import asyncio
 import jinja2
+import pytest
+import queue
 import smax
 from smax import log
 import utils
 
 env = jinja2.Environment()
 
+# The debouncer state machine will call your callback
+# on the first input change; then ignore subsequent changes
+# for {{ignore_time}} (by default, 150ms).  When {{event}}(state)
+# is received, we cache the state, then issue ourselves
+# an {{update}} event.  This update event then drives the
+# callbacks as necessary.
 debouncer_template = env.from_string(
     r"""
 *state s_debounce_{{name}}:
-    ev_{{name}}(active): self._{{name}}_active = active
+    {{event}}(active): {{cache}} = active; self.{{update}}()
     *state start:
-        [self._{{name}}_active] -> s_active
-        -> s_inactive
+        {{update}} [{{cache}}] -> s_active
+        {{update}} -> s_inactive
     state s_inactive:
         enter: {{inactive}}
         *state s_ignore:
             {{ignore_time}} -> s_listen
         state s_listen:
-            [self._{{name}}_active] -> ^s_active
-            ev_{{name}}(active) [active] -> ^s_active:
-                self._{{name}}_active = active
-            ev_{{name}}(active): self._{{name}}_active = active
+            [{{cache}}] -> ^s_active
+            {{update}} [{{cache}}] -> ^s_active
     state s_active:
         enter: {{active}}
         *state s_ignore:
             {{ignore_time}} -> s_listen
         state s_listen:
-            [not self._{{name}}_active] -> ^s_inactive
-            ev_{{name}}(active) [not active] -> ^s_inactive:
-                self._{{name}}_active = active
-            ev_{{name}}(active): self._{{name}}_active = active
+            [not {{cache}}] -> ^s_inactive
+            {{update}} [not {{cache}}] -> ^s_inactive
 """
 )
 
 machine_template = env.from_string(
     r"""
-import smax.log as log
 machine TestMachine:
-    {{debouncer(
-        name="switch_a",
-        inactive="self.switch_a_inactive()",
-        active="self.switch_a_active()",
-    )|indent}}
+    {{debouncer(name="switch_a")|indent}}
     ---
-    {{debouncer(
-        name="switch_b",
-        inactive="self.switch_b_inactive()",
-        active="self.switch_b_active()",
-    )|indent}}
+    {{debouncer(name="switch_b")|indent}}
     ---
-    {{debouncer(
-        name="switch_c",
-        inactive="self.switch_c_inactive()",
-        active="self.switch_c_active()",
-    )|indent}}
+    {{debouncer(name="switch_c")|indent}}
 """
 )
 
 
-def test_debounce():
+def debouncer(name, **kwargs):
+    default_args = {
+        "name": name,
+        "ignore_time": "ms(150)",
+        "cache": "self._%s_cache" % name,
+        "event": "ev_%s" % name,
+        "update": "ev_%s_update" % name,
+        "active": "self.%s(True)" % name,
+        "inactive": "self.%s(False)" % name,
+    }
+    template_args = {**default_args, **kwargs}  # kwargs replace items in default_args
+    global debouncer_template
+    return debouncer_template.render(template_args)
+
+
+@pytest.mark.asyncio
+async def test_debounce():
+    # In async mode, we can create our reactor anytime.
+    loop = asyncio.get_event_loop()
+    reactor = smax.AsyncioReactor(loop)
+    reactor_task = asyncio.create_task(reactor.run())
+
+    # Render the state machine.
     source = machine_template.render(
         {
-            "debouncer": lambda **kwargs: debouncer_template.render(kwargs),
+            "debouncer": debouncer,
         }
     )
     # Allow some tracing of the jinja output.
@@ -77,70 +94,62 @@ def test_debounce():
     class Test(utils.wrap(module.TestMachine)):
         def __init__(self, reactor):
             super(Test, self).__init__(reactor)
-            self._switch_a_active = False
-            self._switch_b_active = False
-            self._switch_c_active = False
+            self._switch_a = False
+            self._switch_b = False
+            self._switch_c = False
+            self._queue = queue.Queue()
 
-        def switch_a_active(self):
-            log.debug("switch_a_active")
+        def switch_a(self, state):
+            log.debug("switch_a %s" % state)
+            self._queue.put(("a", state))
 
-        def switch_a_inactive(self):
-            log.debug("switch_a_inactive")
+        def switch_b(self, state):
+            log.debug("switch_b %s" % state)
+            self._queue.put(("b", state))
 
-        def switch_b_active(self):
-            log.debug("switch_b_active")
+        def switch_c(self, state):
+            log.debug("switch_c %s" % state)
+            self._queue.put(("c", state))
 
-        def switch_b_inactive(self):
-            log.debug("switch_b_inactive")
+    async def messy_switch(stall_s, cb, state):
+        await asyncio.sleep(stall_s)
+        for i in range(4):
+            cb(state)
+            await asyncio.sleep(0.01)
+            cb(not state)
+            await asyncio.sleep(0.01)
+        cb(state)
+        # Stay here long enough for the state machine to want to keep it
+        await asyncio.sleep(0.2)
 
-        def switch_c_active(self):
-            log.debug("switch_c_active")
-
-        def switch_c_inactive(self):
-            log.debug("switch_c_inactive")
-
-    reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
-    test.ev_switch_a(False)
-    test.ev_switch_a(True)
-    """
-    assert test._a == True
-    assert test._b == False
-    assert test._c == False
-    # Now check for exactly the expected transitions.
-    test.expected([
-        (Test.ENTERED, "TestMachine"),
-        (Test.ENTERED, "TestMachine.s_a"),
-    ])
+    await asyncio.gather(
+        messy_switch(0.1, test.ev_switch_a, True),
+        messy_switch(0.2, test.ev_switch_b, True),
+    )
+    await asyncio.gather(
+        messy_switch(0.1, test.ev_switch_a, False),
+        messy_switch(0.2, test.ev_switch_c, True),
+    )
+    await asyncio.gather(
+        messy_switch(0.1, test.ev_switch_b, False),
+        messy_switch(0.2, test.ev_switch_c, False),
+    )
 
-    test.ev_b()
-    assert test._a == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_a"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    reactor.stop()
+    await reactor_task
 
-    test.ev_b()
-    assert test._a == False
-    assert test._b == True
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_b"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_b"),
-    ])
+    expected = [
+        ("a", True),
+        ("b", True),
+        ("a", False),
+        ("c", True),
+        ("b", False),
+        ("c", False),
+    ]
 
-    test.ev_a()
-    assert test._a == True
-    assert test._b == False
-    assert test._c == False
-    test.expected([
-        (Test.HANDLED, "TestMachine", "ev_a"),
-        (Test.EXITED, "TestMachine.s_b"),
-        (Test.ENTERED, "TestMachine.s_a"),
-    ])
-    """
+    for i in expected:
+        r = test._queue.get(timeout=0)
+        log.trace("r=%s i=%s" % (r, i))
+        assert r == i
