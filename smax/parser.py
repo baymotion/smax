@@ -448,6 +448,13 @@ class SyntaxError(Exception):
     pass
 
 
+class SmaxException(Exception):
+    """
+    Used for semantic errors in the state machine spec.
+    """
+    pass
+
+
 class Transition(object):
     def __init__(self, state, event, superclasses, condition, target, code):
         self.state = state
@@ -490,7 +497,7 @@ class Event(object):
             existing_args = self._superclasses.get(name, None)
             if existing_args:
                 if len(args) != len(existing_args):
-                    raise Exception(
+                    raise SmaxException(
                         "Incompatible parameter list with %s superclass %s."
                         % self.name,
                         name,
@@ -523,13 +530,13 @@ class State(object):
             start_found = False
             for s in sl:
                 if s.start and start_found:
-                    raise Exception(
+                    raise SmaxException(
                         "Multiple start states found in %s." % self.name,
                     )
                 if s.start:
                     start_found = True
             if not start_found:
-                raise Exception("No start states found in %s." % self.name)
+                raise SmaxException("No start states found in %s." % self.name)
         u = [self.name]
         d = [self.name]
         s = self
@@ -564,14 +571,21 @@ class State(object):
             m = self
             i = 0
             while t.target[i] == "^":
+                if not m.parent:
+                    raise SmaxException("Cannot go up from %s." % (m.name,))
                 m = m.parent
                 log.trace("t.target[%d] == '^'; going up to %s." % (i, m.name))
                 i += 1
             # assert len(t.target)==(i + 1)
             try:
+                # Is the target state one of our children?
+                # If so then don't unconfigure ourselves.
                 q = m._state[t.target[i]]
                 t.unconfigure = False
             except KeyError:
+                # Is the target state one of our parent's children?
+                if not m.parent:
+                    raise SmaxException("Can't find target state %s." % (t.target[i],))
                 q = m.parent._state[t.target[i]]
                 t.unconfigure = True
             log.trace("t.target[%d] found %s." % (i, q.name))
