@@ -452,6 +452,7 @@ class SmaxException(Exception):
     """
     Used for semantic errors in the state machine spec.
     """
+
     pass
 
 
