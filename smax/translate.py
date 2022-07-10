@@ -29,6 +29,7 @@ class {{ machine.name }}({{machine.superclass}}):
         self._state = { }
         self._state_machine_debug_enable = debug_enable
         self._is_valid = False
+        self._busy = False
     def _state_machine_debug(self, msg):
         if self._state_machine_debug_enable:
             print(
@@ -76,13 +77,21 @@ class {{ machine.name }}({{machine.superclass}}):
         self._is_valid = True
     def end(self):
         self._{{machine|munge("unconfigure")}}()
+    def call(self, cb, *args):
+        self._reactor.call(cb, *args)
     # events
     {%- for ev in machine.event_list %}
     def {{ev.name}}({{ev.args|insert("self")|join(", ")}}):
         m = lambda self: self._{{machine.full_name}}_{{ev.name}}(
             {{ev.args|join(", ")}}
         )
-        return self._reactor._run_event(self, m)
+        if self._busy:
+            raise RuntimeError("{{machine.name}} recursive events (via a call to {{ev.name}}) is not supported.")
+        try:
+            self._busy = True
+            return self._reactor._run_event(self, m)
+        finally:
+            self._busy = False
     {%- endfor %}{# ev in machine.event_list #}
     # states
     {%- for state in machine.all_states() %}
