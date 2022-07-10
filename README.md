@@ -300,7 +300,6 @@ Frequently, the same state machine patterns occur in multiple places within your
 
 But consider another technique for handling this situation, which is to use a macro text substitution tool to replicate the pattern in a parent state machine.  In this case, each debouncer would run as a parallel machine within a parent state machine.  When a switch change is seen, instead of calling a common method on a specific state machine instance (as above), you'd call the switch-specific event on the parent state machine instance.  Because all active parallel machines receive all the machine's events, the debouncer now can also pay attention to global events sent to that machine (e.g. "ev_reset"); passing along debouncer results to the parent state machine becomes easy (e.g. "self.ev_switch_a_active()"); and the entire debouncer mechanism can be activated and deactivated on demand (in the same way the serial port above is deactivated when the USB controller is unplugged above).  For an example of using Jinja2 in this way, check out test/test_debounce.py.
 
-
 # API
 
 ## Reactor -- the state machine runtime.
@@ -368,6 +367,36 @@ To support programs using asyncio, smax provides an smax.AsyncioReactor which af
         ...
 
 In this mode, when the state machine blocks waiting for another event or timeout, control will be returned to the event loop.  Note that AsyncioReactor always serializes transitions to all its attached state machines.  It's always ok for a coroutine to call a state machine event; when run with AsyncioReactor, those calls are added to a queue that the reactor steps through sequentially.
+
+# Gotchas
+
+## Nested events
+
+Each event specification results in a corresponding method in the generated state machine.  When this method is called, the state machine starts polling the current states you're in, executing transitions as appropriate.  There's no restriction on what you can do in an event callback--including call another event.  But be aware that this may not do what you expect: if the outer event is currently in that polling mode, affecting states through one part of the machine, and that results in an invocation of another event--which causes other transitions--you can easily wind up in an unexpected state.  To avoid accidental use of recursive events, the generated state machine will raise a RuntimeError in this case.
+
+There are two workarounds available for state machines that want this.  One solution is to use "self.call" to queue up the subsequent event, allowing the current transition to complete before the following event is observed.  ("self.call" is just a proxy for "reactor.call".)  In this example, we'll enter s_b before executing ev_c, providing a well specified sequence.
+
+        machine Example:
+            *state s_a:
+                ev_b -> s_b: self._reactor.call(self.ev_c)
+            state s_b:
+                pass
+            ev_c -> s_c
+            state s_c:
+                pass
+
+Another solution is to use AsyncioReactor: AsyncioReactor *always* queues event calls, as described above.
+
+## Perpetual loops and stack overflows
+
+Mutual state machine transitions can result in an infinite loop--which usually results in a python stack overflow.  The best implementation for this type of machine is to make these transitions trigger on "s(0)".  In this case, the transition is queued up for the reactor instead of executed immediately... allowing the current transition to complete.
+
+        machine Example:
+            *state s_a:
+                s(0) -> s_b
+            state s_b:
+                s(0) -> s_a
+
 
 # License
 
