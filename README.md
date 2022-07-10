@@ -19,6 +19,10 @@ Smax allows you to change your state on elapsed time as well as received events.
   * Both the source and generated code work nicely with diff and version control tools
   * AsyncioReactor supports state machine execution under asyncio
 
+# Installation
+
+    pip3 install smax-dsl
+
 # Examples
 
 ## A simple single-level state machine
