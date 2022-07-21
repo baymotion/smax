@@ -18,6 +18,7 @@ Smax allows you to change your state on elapsed time as well as received events.
   * Transitions can be based on timers
   * Both the source and generated code work nicely with diff and version control tools
   * AsyncioReactor supports state machine execution under asyncio
+  * State machine specifications can be dumped to yaml or plantuml
 
 # Installation
 
@@ -340,6 +341,10 @@ Note that after_s and after_ms are specified to accept floating point values, so
         # then returns None.
         def sync(self):
             ...
+
+## Diagrams
+
+Smax comes with a command-line tool ("smax") which loads state machine specifications and writes various outputs from that specification.  When run with "--yaml <yamlfilename>", the state machine data will be written as yaml data to the given filename; running with "--plantuml <filename>" will generate a plantuml state machine script.  Note that there is no effort made to format the plantuml state diagram, so your mileage may vary with this.
 
 ## State machine debugging
 
