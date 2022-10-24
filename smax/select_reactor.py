@@ -31,15 +31,18 @@ class SelectReactor(smax.Reactor):
                 return
             # timeout may be None
             log.trace("timeout=%s." % timeout)
-            r, w, x = select.select(
-                self._r.keys(), self._w.keys(), self._x.keys(), timeout
-            )
+            r, w, x = self.select(timeout)
             for ir in r:
                 self._r[ir]()
             for iw in w:
                 self._w[iw]()
             for ix in x:
                 self._x[ix]()
+
+    def select(self, timeout):
+        """Allow subclasses to modify our blocking behavior."""
+        r, w, x = select.select(self._r.keys(), self._w.keys(), self._x.keys(), timeout)
+        return r, w, x
 
     def _signal(self):
         os.write(self._control_write, self.update)
