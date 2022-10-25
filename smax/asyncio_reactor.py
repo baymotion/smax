@@ -1,4 +1,4 @@
-# This file is part of the smax project (http://github.com/pjogrady/smax)
+# This file is part of the smax project (http://github.com/baymotion/smax)
 # and is copyrighted under GPL v3 or later.
 
 import asyncio
