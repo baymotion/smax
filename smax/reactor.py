@@ -1,4 +1,4 @@
-# This file is part of the smax project (http://github.com/pjogrady/smax)
+# This file is part of the smax project (http://github.com/baymotion/smax)
 # and is copyrighted under GPL v3 or later.
 
 import queue
@@ -73,4 +73,5 @@ class Reactor(object):
         assert False
 
     def _run_event(self, machine, ev):
-        ev(machine)
+        """All events are queued up."""
+        self.call(ev, machine)
