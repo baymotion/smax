@@ -30,8 +30,10 @@ def test_constant():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert test._started
     # Check for exactly the expected transitions.
     test.expected([(Test.ENTERED, Test.TestMachine)])
     test.end()
+    reactor.sync()
     test.expected([(Test.EXITED, Test.TestMachine)])

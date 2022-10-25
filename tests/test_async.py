@@ -60,6 +60,7 @@ async def test_async():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert test._a
     assert not test._b
     assert not test._c

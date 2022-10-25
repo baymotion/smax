@@ -19,8 +19,10 @@ def test_not_started():
     Test = utils.wrap(module.TestMachine)
     reactor = smax.SelectReactor()
     test = Test(reactor)
+    # CALL TO test.start() IS OMITTED
     try:
         test.ev_a()
+        reactor.sync()
     except RuntimeError:
         return
     assert False and "Didn't trigger a runtime error."

@@ -42,6 +42,7 @@ def test_direct_transition():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert not test._a
     assert test._b
 

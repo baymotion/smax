@@ -59,6 +59,7 @@ def test_events():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert test._a
     assert not test._b
     assert not test._c
@@ -71,6 +72,7 @@ def test_events():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert test._b
     assert not test._c
@@ -83,6 +85,7 @@ def test_events():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert test._b
     assert not test._c
@@ -93,6 +96,7 @@ def test_events():
     )
 
     test.ev_a()
+    reactor.sync()
     assert test._a
     assert not test._b
     assert not test._c
@@ -105,6 +109,7 @@ def test_events():
     )
 
     test.ev_d()
+    reactor.sync()
     test.expected(
         [
             (Test.HANDLED, "TestMachine", "ev_d"),
@@ -117,6 +122,7 @@ def test_events():
     )
 
     test.ev_x()
+    reactor.sync()
     test.expected(
         [
             (Test.HANDLED, "TestMachine.s_d.s_d_1", "ev_x"),
@@ -125,6 +131,7 @@ def test_events():
     )
 
     test.ev_a()
+    reactor.sync()
     test.expected(
         [
             (Test.HANDLED, "TestMachine.s_d", "ev_a"),

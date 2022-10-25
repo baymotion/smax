@@ -60,6 +60,7 @@ def test_event_specialization():
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
+    reactor.sync()
     assert test._a
     assert not test._general
     assert test._general_parameter is None
@@ -74,6 +75,7 @@ def test_event_specialization():
     )
 
     test.ev_general(1)
+    reactor.sync()
     assert not test._a
     assert test._general
     assert test._general_parameter == 1
@@ -88,6 +90,7 @@ def test_event_specialization():
     )
 
     test.ev_reset()
+    reactor.sync()
     assert test._a
     assert not test._general
     assert test._general_parameter == 1
@@ -103,6 +106,7 @@ def test_event_specialization():
 
     # in this case, ev_specific is handled as ev_general(0)
     test.ev_specific()
+    reactor.sync()
     assert not test._a
     assert test._general
     assert test._general_parameter == 0
@@ -121,6 +125,7 @@ def test_event_specialization():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._general
     assert test._general_parameter == 0
@@ -135,6 +140,7 @@ def test_event_specialization():
     )
 
     test.ev_specific()
+    reactor.sync()
     assert not test._a
     assert not test._general
     assert test._general_parameter == 0
@@ -149,6 +155,7 @@ def test_event_specialization():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._general
     assert test._general_parameter == 0
@@ -163,6 +170,7 @@ def test_event_specialization():
     )
 
     test.ev_general(2)
+    reactor.sync()
     assert not test._a
     assert test._general
     assert test._general_parameter == 2

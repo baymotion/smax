@@ -73,10 +73,10 @@ class {{ machine.name }}({{machine.superclass}}):
     def start(self):
         if self._is_valid:
             raise RuntimeError("{{machine.name}} is already running")
-        self._{{machine|munge("enter")}}()
+        self.call(self._{{machine|munge("enter")}})
         self._is_valid = True
     def end(self):
-        self._{{machine|munge("unconfigure")}}()
+        self.call(self._{{machine|munge("unconfigure")}})
     def call(self, cb, *args):
         self._reactor.call(cb, *args)
     # events
