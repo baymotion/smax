@@ -58,6 +58,7 @@ def test_substates():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert test._a
     assert test._a_1
     assert not test._a_2
@@ -73,6 +74,7 @@ def test_substates():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._a_1
     assert not test._a_2
@@ -88,6 +90,7 @@ def test_substates():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._a_1
     assert not test._a_2
@@ -100,6 +103,7 @@ def test_substates():
     )
 
     test.ev_a()
+    reactor.sync()
     assert test._a
     assert test._a_1
     assert not test._a_2
@@ -115,6 +119,7 @@ def test_substates():
     )
 
     test.ev_a_1()
+    reactor.sync()
     assert test._a
     assert test._a_1
     assert not test._a_2
@@ -127,6 +132,7 @@ def test_substates():
     )
 
     test.ev_a_2()
+    reactor.sync()
     assert test._a
     assert not test._a_1
     assert test._a_2
@@ -141,6 +147,7 @@ def test_substates():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._a_1
     assert not test._a_2

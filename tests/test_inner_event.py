@@ -7,7 +7,7 @@ import utils
 
 r"""
 %%
-machine BadMachine:
+machine DirectMachine:
     *state s_a:
         ev_b -> s_b: self.ev_c()
     state s_b:
@@ -16,7 +16,7 @@ machine BadMachine:
         enter: self.done()
     ev_c -> s_c
 
-machine GoodMachine:
+machine CallingMachine:
     *state s_a:
         ev_b -> s_b: self.call(self.ev_c)
     state s_b:
@@ -31,42 +31,37 @@ machine GoodMachine:
 @pytest.mark.asyncio
 async def test_inner_event():
 
-    # Bad version: This triggers a RuntimeError.
+    # Direct version calls ev_c directly.
     reactor = smax.SelectReactor()
     module = utils.compile_state_machine(__file__)
 
-    class Bad(utils.wrap(module.BadMachine)):
+    class Direct(utils.wrap(module.DirectMachine)):
         def done(self):
             reactor.stop()
 
-    bad = Bad(reactor)
-    bad.start()
-    try:
-        reactor.after_ms(10, bad.ev_b())
-        reactor.run()
-    except RuntimeError as e:
-        pass
-    else:
-        assert False
+    direct = Direct(reactor)
+    direct.start()
+    reactor.after_ms(10, direct.ev_b)
+    reactor.run()
 
-    # Good version: This uses SelectReactor in the right way.
-    class Good(utils.wrap(module.GoodMachine)):
+    # Calling version uses reactor.call to trigger an event.
+    class Calling(utils.wrap(module.CallingMachine)):
         def done(self):
             reactor.stop()
 
     reactor = smax.SelectReactor()
-    good = Good(reactor)
-    good.start()
-    reactor.after_ms(10, good.ev_b())
+    calling = Calling(reactor)
+    calling.start()
+    reactor.after_ms(10, calling.ev_b)
     reactor.run()
 
-    # You can run the bad version with an AsyncioReactor.
+    # You can run the direct version with an AsyncioReactor.
     loop = asyncio.get_event_loop()
     reactor = smax.AsyncioReactor(loop)
     reactor_task = asyncio.create_task(reactor.run())
-    bad = Bad(reactor)
-    bad.start()
+    direct = Direct(reactor)
+    direct.start()
     await asyncio.sleep(0.1)
-    bad.ev_b()
+    direct.ev_b()
     timeout_s = 10
     await asyncio.wait_for(reactor_task, timeout_s)

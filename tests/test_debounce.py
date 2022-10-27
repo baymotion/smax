@@ -124,6 +124,7 @@ async def test_debounce():
 
     test = Test(reactor)
     test.start()
+    reactor.sync()
     await asyncio.gather(
         messy_switch(0.1, test.ev_switch_a, True),
         messy_switch(0.2, test.ev_switch_b, True),

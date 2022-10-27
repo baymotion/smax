@@ -51,6 +51,7 @@ def test_cross_states():
     reactor = smax.SelectReactor()
     test = Test(reactor)
     test.start()
+    reactor.sync()
     assert test._a
     assert test._a_1
     assert not test._a_2
@@ -63,6 +64,7 @@ def test_cross_states():
         ]
     )
     test.ev_a_2()  # this has no effect until we're in s_b.
+    reactor.sync()
     assert test._a
     assert test._a_1
     assert not test._a_2
@@ -75,6 +77,7 @@ def test_cross_states():
     )
 
     test.ev_b()
+    reactor.sync()
     assert not test._a
     assert not test._a_1
     assert not test._a_2
@@ -90,6 +93,7 @@ def test_cross_states():
     )
 
     test.ev_a_2()
+    reactor.sync()
     assert test._a
     assert not test._a_1
     assert test._a_2

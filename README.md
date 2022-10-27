@@ -220,7 +220,7 @@ Notes:
         state s_two:
             pass
 
-    For a single call to ev_event when in s_one, each condition will be evaluated in the order given in the script.  The first one that returns True will be followed and the rest will not be checked.  In this example, we'll always wind up in either s_two, s_three, or s_four, assuming that we're in s_one.  The statement "ev_event -> s_four" is considered to have a condition that is always True.
+    For a single call to ev_event when in s_one, each condition will be evaluated in the order given in the script.  The first one that returns True will be followed and the rest will not be checked.  In this example, we'll always wind up in either s_two, s_three, or s_four, assuming that we're in s_one.  The statement "ev_event -> s_four" is considered to have a condition that is always True.  Note that a call to ev_event results in that event being queued up for execution by the reactor, so the transition (and the checking of these conditions) will happen when the reactor gets to it.
 
     In the above example, a default transition is combined with a condition:
 

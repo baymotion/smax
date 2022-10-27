@@ -36,8 +36,9 @@ def test_overflow():
     Test = utils.wrap(module.TestMachine)
     reactor = smax.SelectReactor()
     test = Test(reactor)
+    test.start()
     try:
-        test.start()
+        reactor.sync()
     except RecursionError as e:
         print("Caught %s (%s), as expected" % (type(e).__name__, e))
         pass

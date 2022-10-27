@@ -52,6 +52,7 @@ def test_timeouts():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    reactor.sync()
     assert test._a
     assert not test._b
 

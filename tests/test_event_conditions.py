@@ -1,5 +1,5 @@
-# test_conditions.py - Ensure that conditions
-# around transitions are handled per specification.
+# test_event_conditions.py - Ensure that conditions
+# on events are handled per specification.
 
 import smax
 import utils
@@ -17,13 +17,13 @@ machine TestMachine:
     exit:
         assert False
     *state s_start:
-        [ self.check_bad() ] -> s_bad
-        [ self.check_more() ] -> s_bad
-        -> s_check
+        ev_a [ self.check_bad() ] -> s_bad
+        ev_a [ self.check_more() ] -> s_bad
+        ev_a -> s_check
         ms(1) -> s_bad
     state s_check:
-        [ self.check_good() ] -> s_good
-        -> s_bad
+        ev_a [ self.check_good() ] -> s_good
+        ev_a -> s_bad
     state s_good:
         pass
     state s_bad:
@@ -32,7 +32,7 @@ machine TestMachine:
 """
 
 
-def test_events():
+def test_event_conditions():
     module = utils.compile_state_machine(__file__)
 
     class Test(utils.wrap(module.TestMachine)):
@@ -61,16 +61,18 @@ def test_events():
     test = Test(reactor)
     test._state_machine_debug_enable = True
     test.start()
+    test.ev_a()
+    test.ev_a()
     reactor.sync()
     # Now check for exactly the expected transitions.
     test.expected(
         [
             (Test.ENTERED, "TestMachine"),
             (Test.ENTERED, "TestMachine.s_start"),
-            (Test.HANDLED, "TestMachine.s_start", None),
+            (Test.HANDLED, "TestMachine.s_start", "ev_a"),
             (Test.EXITED, "TestMachine.s_start"),
             (Test.ENTERED, "TestMachine.s_check"),
-            (Test.HANDLED, "TestMachine.s_check", None),
+            (Test.HANDLED, "TestMachine.s_check", "ev_a"),
             (Test.EXITED, "TestMachine.s_check"),
             (Test.ENTERED, "TestMachine.s_good"),
         ]
