@@ -98,7 +98,6 @@ parser state_machine:
     token DEDENT: "faking out the scanner with something that shouldnt ever match, part 2"
     token INDENTED_CODE: "faking out the scanner with something that shouldnt ever match, part 3"
     token MACHINE: "machine"
-    token MACRO: "macro"
     token STATE: "state"
     token PASS: "pass"
     token ENTER: "enter"
@@ -128,7 +127,6 @@ parser state_machine:
 
     rule machine_spec<<spec>>:
         (   machine<<spec>>
-        |   macro<<spec>>
         |   constant<<spec>>
         |   import_<<spec>>      # 'import' is a keyword so we use this alias.
         )*
@@ -145,59 +143,38 @@ parser state_machine:
         {{ superclass = "object" }}
         MACHINE machine_name [ OPEN_PAREN NAME CLOSE_PAREN {{ superclass = NAME }} ] ':'
         {{ machine = spec.machine(machine_name, superclass) }}
+        {{ context = machine.context() }}
+        {{ states = [] }}
         INDENT
-            ( state_machine_list<<machine.context()>>
+            ( state_decl<<context>>     {{ states.append(state_decl) }}
             | enter_clause              {{  machine.set_enter(enter_clause) }}
             | exit_clause               {{  machine.set_exit(exit_clause) }}
             | transition<<machine.context()>>
+            | AND                       {{ if len(states): context.state_machine(states); states=[]; context=machine.context() }}
             )*
         DEDENT
+        {{ if len(states): context.state_machine(states) }}
         {{ machine.check() }}
-
-    rule macro<<spec>>:
-        MACRO NAME ':'
-        {{ macro = spec.macro(NAME) }}
-        INDENT
-            ( transition<<macro>>
-            | timeout<<macro>>
-            | inner_states<<macro>>
-            | enter_clause              {{  macro.set_enter(enter_clause) }}
-            | exit_clause               {{  macro.set_exit(exit_clause) }}
-            | default_transition<<macro>>
-            | PASS
-            )*
-        DEDENT
-        {{ macro.check() }}
-
-    rule state_machine_list<<context>>:
-        [ AND ] # this allows a '---' before the first state.
-        state_list<<context>> {{ context.state_machine(state_list) }}
-        ( AND state_list<<context>> {{ context.state_machine(state_list) }} )*
-
-    rule state_list<<context>>:
-        {{ states = [ ] }}
-        ( state_decl<<context>> {{ states.append(state_decl) }} )+
-        {{ return states }}
 
     rule state_decl<<context>>:
         start STATE
             state_name ':'
                 {{ state = context.state(state_name, start) }}
+        {{ states = [] }}
+        {{ inner_context = state.new_context() }}
         INDENT
             ( transition<<state>>
             | timeout<<state>>
-            | inner_states<<state>>
+            | state_decl<<inner_context>> {{ states.append(state_decl) }}
             | enter_clause              {{  state.set_enter(enter_clause) }}
             | exit_clause               {{  state.set_exit(exit_clause) }}
             | default_transition<<state>>
             | PASS
+            | AND                       {{ if len(states): inner_context.state_machine(states); states=[]; inner_context = state.new_context() }}
             )*
         DEDENT
+        {{ if len(states): inner_context.state_machine(states) }}
         {{ return state }}
-
-    rule inner_states<<state>>:
-        {{ inner_context = state.new_context() }}
-        state_machine_list<<inner_context>>
 
     rule start:
         {{ r=False }}
@@ -364,16 +341,49 @@ class Scanner(state_machineScanner):  # noqa: F821
 
     def token(self, restrict, context=None):
         log.trace("restrict=%s, pos=%s." % (restrict, self.get_pos()))
+        # If we're looking for INDENTED_CODE, return this if the
+        # input text indent >= current indent level.
+        if "INDENTED_CODE" in restrict:
+            m = self._indented_code.match(self.input, self.pos)
+            log.trace("Checking indented code, m=%s." % (m,))
+            if m:
+                indent = len(m.group(1))
+                code = m.group(2)
+                log.trace(
+                    "indent=%u (was %u), code=%s."
+                    % (
+                        indent,
+                        self._indent[-1],
+                        code,
+                    )
+                )
+                if indent >= self._indent[-1]:
+                    code_spaces = " " * (indent - self._indent[-1])
+                    line = code_spaces + code
+                    token = yapps.runtime.Token(
+                        "INDENTED_CODE",
+                        line,
+                        self.get_pos(),
+                    )
+                    log.trace("token=%s." % (token,))
+                    self.pos += len(m.group(0))
+                    return token
         # If they're looking for INDENT or DEDENT,
         # see if we're at the end-of-line followed by some
         # spaces; if the indent level changes, then pass that
-        # token back up.  We'll consider EOF to be a DEDENT
-        # if we're looking for dedent too.
-        if ("DEDENT" in restrict) and (self.pos >= len(self.input)):
+        # token back up.  We'll consider EOF to be a series of
+        # DEDENT if we're looking for dedent too.
+        if (
+            ("DEDENT" in restrict)
+            and (self.pos >= len(self.input))
+            and len(self._indent)
+        ):
+            self._indent.pop()
             token = yapps.runtime.Token("DEDENT", 0, self.get_pos())
             return token
         if ("INDENT" in restrict) or ("DEDENT" in restrict):
             while True:
+                # skip blank lines and comments
                 m = self._blank_line.match(self.input, self.pos)
                 if m:
                     self.pos += len(m.group(0)) - 1  # KEEP THE LAST NEWLINE.
@@ -404,31 +414,6 @@ class Scanner(state_machineScanner):  # noqa: F821
                         self.get_pos(),
                     )
                     log.trace("token=%s." % (token,))
-                    return token
-        if "INDENTED_CODE" in restrict:
-            m = self._indented_code.match(self.input, self.pos)
-            log.trace("Checking indented code, m=%s." % (m,))
-            if m:
-                indent = len(m.group(1))
-                code = m.group(2)
-                log.trace(
-                    "indent=%u (was %u), code=%s."
-                    % (
-                        indent,
-                        self._indent[-1],
-                        code,
-                    )
-                )
-                if indent >= self._indent[-1]:
-                    code_spaces = " " * (indent - self._indent[-1])
-                    line = code_spaces + code
-                    token = yapps.runtime.Token(
-                        "INDENTED_CODE",
-                        line,
-                        self.get_pos(),
-                    )
-                    log.trace("token=%s." % (token,))
-                    self.pos += len(m.group(0))
                     return token
         token = super(Scanner, self).token(restrict, context)
         log.trace("token=%s." % (token,))
@@ -680,13 +665,10 @@ class State(object):
 
     def state(self, name, start):
         state_name = name
-        log.trace("state name=%s." % (state_name,))
-        try:
-            # is "state_name" in self._state?
-            self._state[state_name]
+        log.trace("state name=%s start=%s." % (state_name, start))
+        # is "state_name" already in self._state?
+        if state_name in self._state:
             raise SyntaxError("State %s is duplicate." % (state_name,))
-        except KeyError:
-            pass
         s = State(self._machine, self, name, start)
         log.trace("new state=%s, parent=%s." % (s.name, s.parent.name))
         self._state[state_name] = s
@@ -718,15 +700,6 @@ class State(object):
             for i in m:
                 r.extend(i.all_states())
         return r
-
-
-#   def start_states(self):
-#       if not self.start:
-#           return [ ]
-#       r = [ self ]
-#       for i in self._all_inner_states:
-#           r.extend(i.start_states())
-#       return r
 
 
 class Machine(State):
@@ -765,42 +738,6 @@ class Machine(State):
         for s in self.all_states():
             if s != self:
                 s.check(self)
-        # go through all the transitions and find
-        # their targets.
-
-
-#       for m in self.inner_states:
-#           for s in m:
-#               for t in s.transitions:
-#                   log.debug("t=%s, target=%s." % (t, t.target))
-#                   if t.target == None:
-#                       continue
-#                   # log.debug("self._state=%s." % (self._state.keys(),))
-#                   assert len(t.target)==1
-#                   t.target_state = self._state[t.target[0]]
-#               for t in s.timeouts:
-#                   log.debug("t=%s, target=%s." % (t, t.target))
-#                   if t.target == None:
-#                       continue
-#                   # log.debug("self._state=%s." % (self._state.keys(),))
-#                   assert len(t.target)==1
-#                   t.target_state = self._state[t.target[0]]
-
-
-class Macro(Machine):
-    def __init__(self, name):
-        super(Macro, self).__init__(name, "object")
-
-
-#       self._name = name
-#       self.enter = [ ]
-#       self.exit = [ ]
-#   def context(self):
-#       return self
-#   def set_enter(self, enter):
-#       self.enter = enter
-#   def set_exit(self, exit):
-#       self.exit = exit
 
 
 class Specification:
@@ -823,8 +760,3 @@ class Specification:
 
     def spec(self):
         return self._output
-
-    def macro(self, name):
-        m = Macro(name)
-        self._output.append({"macro": m})
-        return m
