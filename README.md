@@ -377,20 +377,7 @@ In this mode, when the state machine blocks waiting for another event or timeout
 
 ## Nested events
 
-Each event specification results in a corresponding method in the generated state machine.  When this method is called, the state machine starts polling the current states you're in, executing transitions as appropriate.  There's no restriction on what you can do in an event callback--including call another event.  But be aware that this may not do what you expect: if the outer event is currently in that polling mode, affecting states through one part of the machine, and that results in an invocation of another event--which causes other transitions--you can easily wind up in an unexpected state.  To avoid accidental use of recursive events, the generated state machine will raise a RuntimeError in this case.
-
-There are two workarounds available for state machines that want this.  One solution is to use "self.call" to queue up the subsequent event, allowing the current transition to complete before the following event is observed.  ("self.call" is just a proxy for "reactor.call".)  In this example, we'll enter s_b before executing ev_c, providing a well specified sequence.
-
-        machine Example:
-            *state s_a:
-                ev_b -> s_b: self._reactor.call(self.ev_c)
-            state s_b:
-                pass
-            ev_c -> s_c
-            state s_c:
-                pass
-
-Another solution is to use AsyncioReactor: AsyncioReactor *always* queues event calls, as described above.
+Each event specification results in a corresponding method in the generated state machine; calls to these event methods queue up a callback for execution by the reactor.  Events can be called from within state machine transitions, in which case the current transition will complete (and any other queued activity) before the called event is acted on.  If you call several event methods, be aware that they act on the states that are active at the time the event is executed--not the time it's queued.
 
 ## Perpetual loops and stack overflows
 
