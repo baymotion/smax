@@ -102,6 +102,7 @@ parser state_machine:
     token PASS: "pass"
     token ENTER: "enter"
     token EXIT: "exit"
+    token FROM: "from"
     token IMPORT: "import"
     token IS: "is"
     token START: "\\*"
@@ -137,7 +138,9 @@ parser state_machine:
         NAME '=' TOEOL {{ return spec.constant(NAME.strip(), TOEOL.strip()) }}
 
     rule import_<<spec>>:
-        IMPORT TOEOL {{ return spec.import_("import %s" % TOEOL.strip()) }}
+        (   IMPORT TOEOL {{ return spec.import_("import %s" % TOEOL.strip()) }}
+        |   FROM TOEOL {{ return spec.import_("from %s" % TOEOL.strip()) }}
+        )
 
     rule machine<<spec>>:
         {{ superclass = "object" }}
@@ -186,7 +189,6 @@ parser state_machine:
         {{ condition=None }}
         {{ state_target=None }}
         {{ code_clause=None }}
-        {{ state_target=None }}
         {{ superclasses=[ ] }}
         event_name
             ( OPEN_PAREN event_args CLOSE_PAREN )?

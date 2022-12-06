@@ -26,7 +26,7 @@ class Reactor(object):
                 cb(*args)
                 continue
             timeout = None
-            now = time.time()
+            now = time.monotonic()
             if self._alarms:
                 trigger, cb, args = self._alarms[0]
                 if trigger <= now:
@@ -44,7 +44,7 @@ class Reactor(object):
         self._signal()
 
     def after_s(self, seconds, callback, *args):
-        trigger = time.time() + seconds
+        trigger = time.monotonic() + seconds
         r = (trigger, callback, args)
         log.trace("after_s cb=%s." % callback)
         self._alarms.append(r)
